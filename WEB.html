@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyBound AI - Tim chuyen bay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0061ff;
+            --secondary: #60efff;
+            --glass: rgba(255, 255, 255, 0.95);
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(0, 97, 255, 0.5)),
+                        url('https://images.unsplash.com/photo-1464039397811-476f652a343b?q=80&w=2068&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .main-container { width: 100%; max-width: 620px; }
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        h2 { margin: 0 0 1rem; color: #1e293b; font-weight: 800; }
+        .form-group { text-align: left; margin-bottom: 1rem; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        label { font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block; }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        textarea { resize: vertical; margin-bottom: 0.5rem; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,97,255,0.3); }
+        .secondary-btn {
+            background: #0f172a;
+        }
+        .prompt-hint {
+            color: #64748b;
+            font-size: 0.86rem;
+            line-height: 1.5;
+            margin-top: 6px;
+        }
+        .prompt-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .ai-feedback {
+            display: none;
+            margin-top: 10px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #fff7ed;
+            color: #9a3412;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid #fdba74;
+            text-align: left;
+        }
+        .ai-suggestion-list {
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .prompt-chip {
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .prompt-chip:hover {
+            background: #dbeafe;
+        }
+        .loading { display: none; margin: 20px 0; color: white; font-weight: 600; text-align: center; }
+        #result-area { display: none; margin-top: 20px; }
+        .section-card {
+            background: rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            color: white;
+            font-size: 1rem;
+            font-weight: 800;
+            margin: 4px 6px 12px;
+        }
+        .result-card {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            color: #1e293b;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            border: 1px solid #edf2f7;
+            overflow: hidden;
+        }
+        .tag-header {
+            padding: 10px 15px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: var(--success);
+        }
+        .tag-header.reference { background: var(--warning); }
+        .card-body { padding: 20px; }
+        .route { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 10px; }
+        .meta { color: #475569; font-size: 0.95rem; margin-bottom: 8px; }
+        .price { color: #ef4444; font-size: 1.5rem; font-weight: 800; text-align: right; margin: 10px 0; }
+        .price.muted { color: #0f172a; font-size: 1rem; }
+        .budget-pill {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .budget-pill.ok { background: #dcfce7; color: #166534; }
+        .budget-pill.over { background: #fee2e2; color: #991b1b; }
+        .budget-pill.unknown { background: #e2e8f0; color: #334155; }
+        .ai-reason { background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 0.88rem; color: #64748b; margin-top: 10px; }
+        .cta-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .cta {
+            text-align: center;
+            color: white;
+            font-weight: 800;
+            font-size: 0.88rem;
+            padding: 10px 14px;
+            border-radius: 20px;
+            background: var(--primary);
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.2s;
+        }
+        .cta.secondary { background: #0f172a; }
+        .cta.disabled {
+            background: #94a3b8;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+        .result-note {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+        .error-message { background: white; border-radius: 20px; padding: 20px; text-align: center; color: #dc2626; }
+        hr { margin: 20px 0; border: 1px dashed #cbd5e1; }
+        .flight-date-badge {
+            background: rgba(0,0,0,0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            white-space: nowrap;
+        }
+        .hidden { display: none; }
+        .multi-leg {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 640px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="glass-card">
+            <h2>SkyBound AI</h2>
+            <div class="form-group">
+                <label>Hoac nhap yeu cau bang tieng Viet</label>
+                <textarea id="textRequest" rows="2" placeholder="Vi du: Toi muon di tu Ha Noi den Singapore ngay 22/03/2026, ngan sach 4 trieu dong."></textarea>
+                <div class="prompt-hint">Goi y: neu ban nhap qua mo ho, AI se can them san bay gan ban, ngay bay va ngan sach.</div>
+                <div id="ai-feedback" class="ai-feedback"></div>
+                <div id="ai-suggestion-list" class="ai-suggestion-list"></div>
+                <div class="prompt-list">
+                    <button type="button" class="prompt-chip" onclick="fillPromptAndSearch('Toi muon bay tu Ha Noi den Singapore ngay 21/03/2026, ngan sach 4 trieu')">Ha Noi -> Singapore</button>
+                    <button type="button" class="prompt-chip" onclick="fillPromptAndSearch('Toi muon bay tu TP. Ho Chi Minh den Bangkok ngay 25/03/2026, ngan sach 3 trieu')">TP.HCM -> Bangkok</button>
+                    <button type="button" class="prompt-chip" onclick="fillPromptAndSearch('Toi muon bay tu Da Nang den Ha Noi ngay 22/03/2026, ngan sach 2 trieu')">Da Nang -> Ha Noi</button>
+                </div>
+                <button onclick="searchByText()">Tim bang AI</button>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label>Kieu hanh trinh</label>
+                <select id="tripType" onchange="updateTripTypeUI()">
+                    <option value="oneway">1 chieu</option>
+                    <option value="roundtrip">Khu hoi</option>
+                    <option value="multicity">Nhieu chang</option>
+                </select>
+            </div>
+
+            <div id="single-trip-fields">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Khoi hanh</label>
+                        <select id="fromLoc">
+                            <option value="HAN">Ha Noi (HAN)</option>
+                            <option value="SGN">TP. Ho Chi Minh (SGN)</option>
+                            <option value="DAD">Da Nang (DAD)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Diem den</label>
+                        <select id="toLoc">
+                            <option value="SIN">Singapore (SIN)</option>
+                            <option value="BKK">Bangkok (BKK)</option>
+                            <option value="SGN">TP. Ho Chi Minh (SGN)</option>
+                            <option value="HAN">Ha Noi (HAN)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Ngay di</label>
+                        <input type="date" id="flyDate">
+                    </div>
+                    <div class="form-group hidden" id="return-date-group">
+                        <label>Ngay ve</label>
+                        <input type="date" id="returnDate">
+                    </div>
+                </div>
+            </div>
+
+            <div id="multi-trip-fields" class="hidden">
+                <div id="multi-leg-list"></div>
+                <button type="button" class="secondary-btn" onclick="addMultiCityLeg()">Them chang</button>
+            </div>
+
+            <div class="form-group">
+                <label>Ngan sach toi da (VND)</label>
+                <input type="number" id="budget" value="3000000">
+            </div>
+            <button onclick="searchByForm()">Tim kiem chinh xac</button>
+        </div>
+        <div id="loading" class="loading">Dang tim chuyen bay...</div>
+        <div id="result-area"></div>
+    </div>
+
+    <script>
+        const airportOptions = `
+            <option value="HAN">Ha Noi (HAN)</option>
+            <option value="SGN">TP. Ho Chi Minh (SGN)</option>
+            <option value="DAD">Da Nang (DAD)</option>
+            <option value="SIN">Singapore (SIN)</option>
+            <option value="BKK">Bangkok (BKK)</option>
+        `;
+
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowValue = tomorrow.toISOString().split('T')[0];
+        const dayAfterTomorrow = new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0];
+
+        document.getElementById('flyDate').value = tomorrowValue;
+        document.getElementById('returnDate').value = dayAfterTomorrow;
+
+        function createMultiLeg(index, defaults = {}) {
+            return `
+                <div class="multi-leg" data-leg-index="${index}">
+                    <div class="meta">Chang ${index + 1}</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Khoi hanh</label>
+                            <select class="leg-from">${airportOptions}</select>
+                        </div>
+                        <div class="form-group">
+                            <label>Diem den</label>
+                            <select class="leg-to">${airportOptions}</select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ngay di</label>
+                        <input type="date" class="leg-date" value="${defaults.date || tomorrowValue}">
+                    </div>
+                </div>
+            `;
+        }
+
+        function seedMultiLegs() {
+            const list = document.getElementById('multi-leg-list');
+            list.innerHTML = createMultiLeg(0, { date: tomorrowValue }) + createMultiLeg(1, { date: dayAfterTomorrow });
+            const legs = list.querySelectorAll('.multi-leg');
+            legs[0].querySelector('.leg-from').value = 'HAN';
+            legs[0].querySelector('.leg-to').value = 'SGN';
+            legs[1].querySelector('.leg-from').value = 'SGN';
+            legs[1].querySelector('.leg-to').value = 'BKK';
+        }
+
+        function addMultiCityLeg() {
+            const list = document.getElementById('multi-leg-list');
+            const nextIndex = list.querySelectorAll('.multi-leg').length;
+            list.insertAdjacentHTML('beforeend', createMultiLeg(nextIndex, { date: dayAfterTomorrow }));
+        }
+
+        function updateTripTypeUI() {
+            const tripType = document.getElementById('tripType').value;
+            document.getElementById('single-trip-fields').classList.toggle('hidden', tripType === 'multicity');
+            document.getElementById('multi-trip-fields').classList.toggle('hidden', tripType !== 'multicity');
+            document.getElementById('return-date-group').classList.toggle('hidden', tripType !== 'roundtrip');
+        }
+
+        function formatPrice(price) {
+            if (price === null || price === undefined) {
+                return '<div class="price muted">Xem gia truc tiep tren website hang</div>';
+            }
+            return `<div class="price">${price.toLocaleString()} VND</div>`;
+        }
+
+        function formatTimeInfo(flight) {
+            if (!flight.departure && !flight.arrival) return '';
+            return `<div class="meta">Gio bay: ${flight.departure || '--'} -> ${flight.arrival || '--'}</div>`;
+        }
+
+        function formatBookingHost(url) {
+            try {
+                const host = new URL(url).hostname;
+                return `<div class="meta">Link dat ve: ${host}</div>`;
+            } catch {
+                return `<div class="meta">Link dat ve: ${url}</div>`;
+            }
+        }
+
+        function formatBudgetPill(flight) {
+            if (flight.withinBudget === true) return '<div class="budget-pill ok">Trong ngan sach</div>';
+            if (flight.withinBudget === false) return '<div class="budget-pill over">Vuot ngan sach</div>';
+            return '<div class="budget-pill unknown">Can xem gia truc tiep</div>';
+        }
+
+        function formatRouteCta(flight) {
+            if (!flight.routeLink) {
+                return '<span class="cta secondary disabled">Hang chua ho tro route page</span>';
+            }
+            return `<a href="${flight.routeLink}" target="_blank" rel="noopener noreferrer" class="cta secondary">Mo page chang tren hang</a>`;
+        }
+
+        function fillPrompt(value) {
+            document.getElementById('textRequest').value = value;
+            document.getElementById('textRequest').focus();
+        }
+
+        async function fillPromptAndSearch(value) {
+            fillPrompt(value);
+            await searchByText();
+        }
+
+        function setAiFeedback(message = '') {
+            const box = document.getElementById('ai-feedback');
+            if (!message) {
+                box.style.display = 'none';
+                box.textContent = '';
+                return;
+            }
+            box.textContent = message;
+            box.style.display = 'block';
+        }
+
+        function setAiSuggestions(suggestions = []) {
+            const list = document.getElementById('ai-suggestion-list');
+            if (!suggestions.length) {
+                list.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+            list.innerHTML = suggestions.map(
+                suggestion => `<button type="button" class="prompt-chip" onclick="fillPromptAndSearch(${JSON.stringify(suggestion).replace(/"/g, '&quot;')})">${suggestion}</button>`
+            ).join('');
+            list.style.display = 'flex';
+        }
+
+        function renderFlightCard(section, flight) {
+            const referenceClass = section.exact ? '' : 'reference';
+            const statusLabel = section.exact ? 'Ket qua chang bay' : 'Lich bay tham khao';
+            return `
+                <div class="result-card">
+                    <div class="tag-header ${referenceClass}">
+                        <span>${flight.airline} - ${flight.flightNumber}</span>
+                        <span class="flight-date-badge">${flight.flightDate}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="route">
+                            <span>${section.from}</span>
+                            <span>-></span>
+                            <span>${section.to}</span>
+                        </div>
+                        <div class="meta">${statusLabel}</div>
+                        ${formatBudgetPill(flight)}
+                        ${formatTimeInfo(flight)}
+                        ${formatBookingHost(flight.bookingLink)}
+                        ${flight.routeLink ? '<div class="meta">Luu y: page chang cua hang co the khong giu dung ngay ban da chon.</div>' : ''}
+                        ${formatPrice(flight.price)}
+                        <div class="ai-reason">${flight.note || 'Dang cap nhat thong tin chuyen bay.'}</div>
+                        <div class="cta-group">
+                            <a href="${flight.bookingLink}" target="_blank" rel="noopener noreferrer" class="cta">Mo trang hang</a>
+                            ${formatRouteCta(flight)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function searchByText() {
+            const text = document.getElementById('textRequest').value.trim();
+            if (!text) {
+                alert('Vui long nhap yeu cau.');
+                return;
+            }
+            setAiFeedback('');
+            setAiSuggestions([]);
+            await search({ text, tripType: 'oneway' });
+        }
+
+        function collectMultiCityLegs() {
+            return [...document.querySelectorAll('.multi-leg')].map(leg => ({
+                from: leg.querySelector('.leg-from').value,
+                to: leg.querySelector('.leg-to').value,
+                date: leg.querySelector('.leg-date').value
+            }));
+        }
+
+        async function searchByForm() {
+            const tripType = document.getElementById('tripType').value;
+            const budget = parseInt(document.getElementById('budget').value, 10);
+
+            if (tripType === 'multicity') {
+                const legs = collectMultiCityLegs();
+                if (legs.some(leg => !leg.from || !leg.to || !leg.date)) {
+                    alert('Vui long dien du thong tin cho moi chang.');
+                    return;
+                }
+                await search({ tripType, legs, budget });
+                return;
+            }
+
+            const from = document.getElementById('fromLoc').value;
+            const to = document.getElementById('toLoc').value;
+            const date = document.getElementById('flyDate').value;
+            const returnDate = document.getElementById('returnDate').value;
+
+            if (!from || !to || !date) {
+                alert('Vui long dien day du thong tin.');
+                return;
+            }
+
+            if (tripType === 'roundtrip' && !returnDate) {
+                alert('Vui long chon ngay ve.');
+                return;
+            }
+
+            await search({ tripType, from, to, date, returnDate, budget });
+        }
+
+        async function search(body) {
+            const loading = document.getElementById('loading');
+            const resultArea = document.getElementById('result-area');
+            loading.style.display = 'block';
+            resultArea.style.display = 'none';
+            resultArea.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (!data.success) {
+                    if (body.text && (data.needsClarification || (data.message || '').includes('Thieu thong tin'))) {
+                        setAiFeedback(data.message);
+                        setAiSuggestions(data.suggestionPrompts || []);
+                        resultArea.style.display = 'none';
+                        return;
+                    }
+                    resultArea.innerHTML = `<div class="error-message">${data.message}</div>`;
+                    resultArea.style.display = 'block';
+                    return;
+                }
+
+                setAiFeedback('');
+                setAiSuggestions([]);
+
+                const sectionsHtml = data.sections.map(section => {
+                    const sectionSummary = section.exact
+                        ? `${section.flights.length} chuyen, ${section.budgetMatches} chuyen trong ngan sach`
+                        : `${section.flights.length} lich bay dung ngay`;
+
+                    return `
+                        <div class="section-card">
+                            <div class="section-title">${section.title}: ${section.from} -> ${section.to} | ${section.date}</div>
+                            <div class="result-note">${sectionSummary}</div>
+                            ${section.flights.map(flight => renderFlightCard(section, flight)).join('')}
+                        </div>
+                    `;
+                }).join('');
+
+                resultArea.innerHTML = `${sectionsHtml}<div class="result-note">Tong cong ${data.summary.totalFlights} ket qua tren ${data.summary.totalSections} chang.</div>`;
+                resultArea.style.display = 'block';
+            } catch (error) {
+                loading.style.display = 'none';
+                resultArea.innerHTML = '<div class="error-message">Khong ket noi duoc backend. Hay chay node server.js.</div>';
+                resultArea.style.display = 'block';
+                console.error(error);
+            }
+        }
+
+        seedMultiLegs();
+        updateTripTypeUI();
+    </script>
+</body>
+</html>
