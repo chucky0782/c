@@ -1,490 +1,1016 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkyBound AI - Tim chuyen bay</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>SkyBound AI - Tìm chuyến bay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #0061ff;
-            --secondary: #60efff;
-            --glass: rgba(255, 255, 255, 0.95);
-            --success: #10b981;
-            --warning: #f59e0b;
-        }
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            margin: 0;
-            min-height: 100vh;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(0, 97, 255, 0.5)),
-                        url('https://images.unsplash.com/photo-1464039397811-476f652a343b?q=80&w=2068&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .main-container { width: 100%; max-width: 620px; }
-        .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border-radius: 28px;
-            padding: 2rem;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        h2 { margin: 0 0 1rem; color: #1e293b; font-weight: 800; }
-        .form-group { text-align: left; margin-bottom: 1rem; }
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-        label { font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block; }
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid #cbd5e1;
-            font-family: inherit;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-        textarea { resize: vertical; margin-bottom: 0.5rem; }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 14px;
-            font-size: 1rem;
-            font-weight: 800;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: 0.3s;
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,97,255,0.3); }
-        .secondary-btn {
-            background: #0f172a;
-        }
-        .prompt-hint {
-            color: #64748b;
-            font-size: 0.86rem;
-            line-height: 1.5;
-            margin-top: 6px;
-        }
-        .prompt-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .ai-feedback {
-            display: none;
-            margin-top: 10px;
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: #fff7ed;
-            color: #9a3412;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            border: 1px solid #fdba74;
-            text-align: left;
-        }
-        .ai-suggestion-list {
-            display: none;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .prompt-chip {
-            border: 1px solid #bfdbfe;
-            background: #eff6ff;
-            color: #1d4ed8;
-            border-radius: 999px;
-            padding: 8px 12px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-        .prompt-chip:hover {
-            background: #dbeafe;
-        }
-        .loading { display: none; margin: 20px 0; color: white; font-weight: 600; text-align: center; }
-        #result-area { display: none; margin-top: 20px; }
-        .section-card {
-            background: rgba(255,255,255,0.12);
-            border-radius: 20px;
-            padding: 12px;
-            margin-bottom: 16px;
-        }
-        .section-title {
-            color: white;
-            font-size: 1rem;
-            font-weight: 800;
-            margin: 4px 6px 12px;
-        }
-        .result-card {
-            background: white;
-            border-radius: 20px;
-            margin-bottom: 15px;
-            color: #1e293b;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-            border: 1px solid #edf2f7;
-            overflow: hidden;
-        }
-        .tag-header {
-            padding: 10px 15px;
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            background: var(--success);
-        }
-        .tag-header.reference { background: var(--warning); }
-        .card-body { padding: 20px; }
-        .route { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 10px; }
-        .meta { color: #475569; font-size: 0.95rem; margin-bottom: 8px; }
-        .price { color: #ef4444; font-size: 1.5rem; font-weight: 800; text-align: right; margin: 10px 0; }
-        .price.muted { color: #0f172a; font-size: 1rem; }
-        .budget-pill {
-            display: inline-block;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-        .budget-pill.ok { background: #dcfce7; color: #166534; }
-        .budget-pill.over { background: #fee2e2; color: #991b1b; }
-        .budget-pill.unknown { background: #e2e8f0; color: #334155; }
-        .ai-reason { background: #f8fafc; padding: 12px; border-radius: 12px; font-size: 0.88rem; color: #64748b; margin-top: 10px; }
-        .cta-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .cta {
-            text-align: center;
-            color: white;
-            font-weight: 800;
-            font-size: 0.88rem;
-            padding: 10px 14px;
-            border-radius: 20px;
-            background: var(--primary);
-            text-decoration: none;
-            display: inline-block;
-            transition: 0.2s;
-        }
-        .cta.secondary { background: #0f172a; }
-        .cta.disabled {
-            background: #94a3b8;
-            pointer-events: none;
-            cursor: not-allowed;
-        }
-        .result-note {
-            margin-top: 12px;
-            padding: 12px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.15);
-            color: white;
-            font-size: 0.92rem;
-            line-height: 1.5;
-        }
-        .error-message { background: white; border-radius: 20px; padding: 20px; text-align: center; color: #dc2626; }
-        hr { margin: 20px 0; border: 1px dashed #cbd5e1; }
-        .flight-date-badge {
-            background: rgba(0,0,0,0.2);
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.72rem;
-            white-space: nowrap;
-        }
-        .hidden { display: none; }
-        .multi-leg {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-        @media (max-width: 640px) {
-            .grid-2 { grid-template-columns: 1fr; }
-        }
+        :root{--primary:#0f62fe;--secondary:#66e3ff;--navy:#0e2144;--glass:rgba(255,255,255,.92);--text:#14233d;--muted:#5f6f89;--success:#10b981;--warning:#f59e0b}
+        *{box-sizing:border-box} html{scroll-behavior:smooth}
+        body{margin:0;font-family:'Plus Jakarta Sans',sans-serif;color:#fff;background:linear-gradient(135deg,rgba(4,18,41,.92),rgba(10,71,154,.62)),url('https://images.unsplash.com/photo-1464039397811-476f652a343b?q=80&w=2068&auto=format&fit=crop') center/cover fixed}
+        .page{width:min(1120px,calc(100% - 28px));margin:0 auto;padding:18px 0 38px}
+        .topbar,.hero-card,.glass-card,.info-section{border:1px solid rgba(255,255,255,.16);border-radius:28px;backdrop-filter:blur(16px);box-shadow:0 26px 60px rgba(0,0,0,.24)}
+        .topbar{position:sticky;top:16px;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;padding:14px 18px;background:rgba(6,20,44,.56)}
+        .brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+        .brand strong{display:block}.brand span{display:block;font-size:.82rem;color:rgba(255,255,255,.72)}
+        .nav-links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+        .nav-links a,.nav-cta,.cta{padding:10px 14px;border-radius:999px;text-decoration:none;font-weight:800;transition:.2s ease}
+        .nav-links a{color:#fff}.nav-links a:hover,.nav-cta:hover{background:rgba(255,255,255,.1)} .nav-cta{color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+        .hero{display:grid;grid-template-columns:.95fr 1.05fr;gap:22px;align-items:start}.hero-card{position:sticky;top:102px;padding:26px;background:rgba(7,21,46,.56)}
+        .eyebrow,.section-heading span{display:inline-flex;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.1);font-size:.82rem;font-weight:700;color:#d9f2ff}
+        .hero-card h1{margin:14px 0 12px;font-size:clamp(2rem,4vw,3.1rem);line-height:1.06}.hero-card p,.section-heading p,.info-card p,.about-card p{line-height:1.7;color:rgba(255,255,255,.8)}
+        .hero-points,.stats,.feature-grid,.about-grid{display:grid;gap:12px}.hero-points{margin:22px 0}.point,.stat,.info-card,.about-card{padding:16px;border-radius:20px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.08)}
+        .point strong,.stat strong,.info-card strong,.about-card strong{display:block;margin-bottom:6px}.stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px}
+        .glass-card{padding:28px;background:var(--glass);color:var(--text)} .app-head{margin-bottom:18px}.app-head h2{margin:0 0 8px;font-size:2rem;color:var(--text)} .app-head p{margin:0;line-height:1.65;color:var(--muted)}
+        .form-group{text-align:left;margin-bottom:1rem}.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        label{display:block;margin-bottom:6px;color:#44526a;font-size:.82rem;font-weight:800}
+        input,select,textarea{width:100%;padding:13px 14px;border:1px solid #d4deea;border-radius:15px;font:inherit;color:var(--text);background:#fff}
+        textarea{resize:vertical;min-height:92px} input:focus,select:focus,textarea:focus{outline:none;border-color:#7eb4ff;box-shadow:0 0 0 4px rgba(15,98,254,.12)}
+        button{width:100%;margin-top:10px;padding:14px;border:none;border-radius:16px;font:inherit;font-weight:800;font-size:1rem;color:#fff;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--secondary));transition:.2s ease}
+        button:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(15,98,254,.24)} .secondary-btn{background:linear-gradient(135deg,#10213d,#27446e)}
+        .prompt-hint{margin-top:8px;color:var(--muted);font-size:.88rem;line-height:1.6}.prompt-list,.ai-suggestion-list,.cta-group{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+        .cta-group button,.error-actions button{width:auto;margin-top:0}
+        .prompt-chip{width:auto;margin-top:0;padding:10px 14px;border-radius:999px;border:1px solid #c6dbff;background:#eef5ff;color:#164fc5;box-shadow:none;font-size:.83rem}
+        .ai-feedback{display:none;margin-top:12px;padding:14px 16px;border-radius:18px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;line-height:1.6;text-align:left}
+        hr{margin:24px 0;border:none;border-top:1px dashed #d7deea}.loading{display:none;margin:20px 0;text-align:center;font-weight:700} #result-area{display:none;margin-top:22px}
+        .section-card{margin-bottom:18px;padding:14px;border-radius:24px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14)} .section-title{margin:6px 8px 12px;font-size:1rem;font-weight:800}
+        .result-card{margin-bottom:15px;border-radius:22px;overflow:hidden;background:#fff;color:var(--text);box-shadow:0 18px 36px rgba(0,0,0,.14)} .tag-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 16px;font-size:.79rem;font-weight:800;background:var(--success)} .tag-header.reference{background:var(--warning)}
+        .card-body{padding:20px}.route{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:1.22rem;font-weight:800}.meta{margin-bottom:8px;color:#506078;font-size:.95rem}
+        .price{margin:10px 0;color:#ef4444;font-size:1.5rem;font-weight:800;text-align:right}.price.muted{color:var(--navy);font-size:1rem}.budget-pill{display:inline-block;margin-bottom:8px;padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:800}.budget-pill.ok{background:#dcfce7;color:#166534}.budget-pill.over{background:#fee2e2;color:#991b1b}.budget-pill.unknown{background:#e2e8f0;color:#334155}
+        .ai-reason{margin-top:10px;padding:12px;border-radius:14px;background:#f8fafc;color:var(--muted);font-size:.9rem;line-height:1.6}.cta{display:inline-block;background:var(--primary);color:#fff;font-size:.88rem}.cta.secondary{background:#10213d}.cta.disabled{background:#94a3b8;pointer-events:none;cursor:not-allowed}
+        .result-note{margin-top:12px;padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.14);line-height:1.55}.error-message{padding:20px;border-radius:22px;background:#fff;text-align:center;color:#dc2626;line-height:1.6}.flight-date-badge{padding:4px 10px;border-radius:999px;white-space:nowrap;font-size:.72rem;background:rgba(0,0,0,.18)} .hidden{display:none}
+        .multi-leg{margin-bottom:12px;padding:14px;border:1px solid #dde6f3;border-radius:18px;background:#f8fbff}
+        .consultant-panel,.results-shell{margin-bottom:16px;padding:16px;border-radius:24px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14)}
+        .consultant-head,.results-head,.booking-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+        .consultant-head h3,.results-head h3,.booking-head h3{margin:0 0 8px;font-size:1.15rem}
+        .consultant-head p,.results-head p,.consultant-destination p,.booking-main p,.booking-side p,.ticket-card p,.qr-card p{margin:0;line-height:1.6}
+        .consultant-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+        .consultant-destination,.consultant-loading,.error-card,.empty-card{padding:16px;border-radius:20px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.08)}
+        .consultant-destination strong,.error-card strong,.empty-card strong{display:block;margin-bottom:8px}
+        .consultant-destination ul{margin:10px 0 0;padding-left:18px;color:rgba(255,255,255,.84);line-height:1.55}
+        .filter-row{display:flex;flex-wrap:wrap;gap:10px}
+        .filter-chip,.step-pill{width:auto;margin-top:0;padding:9px 13px;border:none;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.82rem;font-weight:800;box-shadow:none}
+        .filter-chip.active,.step-pill.active{background:linear-gradient(135deg,var(--primary),var(--secondary))}
+        .section-banner{position:relative;min-height:168px;margin-bottom:14px;border-radius:22px;overflow:hidden;background:#1d3557}
+        .section-banner img{width:100%;height:100%;object-fit:cover;display:block}
+        .section-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(3,13,33,.78))}
+        .section-banner-content{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:18px}
+        .section-banner-content strong{display:block;margin-bottom:6px;font-size:1.2rem}
+        .section-banner-content span{display:block;color:rgba(255,255,255,.82);line-height:1.5}
+        .error-card,.empty-card{color:#fff}
+        .error-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+        .error-actions .cta{background:rgba(255,255,255,.12)}
+        .booking-modal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,12,29,.72)}
+        .booking-modal.hidden{display:none}
+        .booking-panel{width:min(980px,100%);max-height:min(92vh,920px);overflow:auto;border-radius:28px;background:#f7fbff;color:var(--text);box-shadow:0 28px 90px rgba(0,0,0,.34)}
+        .booking-head{padding:22px 24px 14px}
+        .booking-head p{color:var(--muted)}
+        .modal-close{width:auto;min-width:44px;margin-top:0;padding:10px 14px;background:#fff;color:var(--navy);border:1px solid #c8d5e8;box-shadow:none}
+        .step-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 24px 14px}
+        .step-pill{justify-content:flex-start;padding:12px 14px;background:#e8eef8;color:var(--muted);text-align:left}
+        .booking-content{display:grid;grid-template-columns:1.16fr .84fr;gap:18px;padding:0 24px 24px}
+        .booking-main,.booking-side{padding:20px;border:1px solid #d8e1ef;border-radius:24px;background:#fff}
+        .booking-side{background:linear-gradient(180deg,#fff,#eef5ff)}
+        .booking-main h4,.booking-side h4{margin:0 0 12px;font-size:1rem}
+        .booking-summary{display:grid;gap:10px}
+        .summary-row{display:flex;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px dashed #d8e1ef;color:var(--muted)}
+        .summary-row strong{color:var(--text)}
+        .booking-error{padding:12px 14px;border-radius:14px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;line-height:1.6}
+        .seat-map{display:grid;gap:10px;margin-top:16px}
+        .seat-row{display:grid;grid-template-columns:34px repeat(3,minmax(0,1fr)) 24px repeat(3,minmax(0,1fr));gap:8px;align-items:center}
+        .seat-row-label{font-size:.84rem;font-weight:700;color:var(--muted);text-align:center}
+        .seat{width:100%;aspect-ratio:1/1;border:none;border-radius:10px 10px 14px 14px;margin-top:0;padding:0;box-shadow:none;font-size:.74rem}
+        .seat.available{background:#dbeafe;color:#1d4ed8}.seat.selected{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}.seat.occupied{background:#cbd5e1;color:#64748b;cursor:not-allowed;pointer-events:none}
+        .seat-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+        .legend-item{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.84rem}
+        .legend-dot{width:16px;height:16px;border-radius:6px}.legend-dot.available{background:#dbeafe}.legend-dot.selected{background:linear-gradient(135deg,var(--primary),var(--secondary))}.legend-dot.occupied{background:#cbd5e1}
+        .passenger-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.passenger-grid .full{grid-column:1/-1}
+        .payment-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:16px;align-items:start}
+        .qr-card{padding:16px;border-radius:20px;background:linear-gradient(180deg,#0f172a,#1e3a5f);color:#fff}
+        .qr-grid{display:grid;grid-template-columns:repeat(21,1fr);gap:1px;width:180px;height:180px;padding:10px;margin:14px auto;border-radius:18px;background:#fff}
+        .qr-cell{background:transparent}.qr-cell.filled{background:#111827}
+        .payment-note{padding:14px;border-radius:18px;background:#eef5ff;color:var(--muted);line-height:1.6}
+        .ticket-card{position:relative;overflow:hidden;padding:20px;border-radius:24px;background:linear-gradient(135deg,#0f62fe,#65d9ff);color:#fff}
+        .ticket-card::after{content:'';position:absolute;inset:auto -70px -70px auto;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.12)}
+        .ticket-top{display:flex;justify-content:space-between;gap:12px;margin-bottom:16px}
+        .ticket-code{font-size:1.35rem;font-weight:800}
+        .ticket-route{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;font-size:1.4rem;font-weight:800}
+        .ticket-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        .ticket-chip{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.16)}
+        .ticket-chip span{display:block;margin-bottom:6px;color:rgba(255,255,255,.78);font-size:.82rem}
+        .booking-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;padding:0 24px 24px;margin-top:0}
+        .booking-footer .cta,.booking-footer button{width:auto;margin-top:0}
+        .info-section{margin-top:24px;padding:24px;background:rgba(7,20,43,.5)} .section-heading{margin-bottom:18px}.section-heading h2{margin:10px 0;font-size:clamp(1.6rem,3.5vw,2.2rem)} .feature-grid,.about-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .footer{margin-top:18px;padding:16px 4px 0;text-align:center;color:rgba(255,255,255,.72);font-size:.9rem}
+        @media (max-width:1080px){.booking-content{grid-template-columns:1fr}}
+        @media (max-width:960px){.hero{grid-template-columns:1fr}.hero-card{position:static}.feature-grid,.about-grid,.ticket-meta{grid-template-columns:1fr}}
+        @media (max-width:720px){.page{width:min(100% - 20px,1120px);padding-top:12px}.topbar{position:static;flex-direction:column;align-items:stretch;text-align:center}.brand{justify-content:center}.stats,.grid-2,.passenger-grid,.payment-grid,.seat-legend,.step-list{grid-template-columns:1fr}.results-head,.consultant-head,.booking-head,.booking-footer{flex-direction:column;align-items:stretch}.seat-row{grid-template-columns:28px repeat(3,minmax(0,1fr)) 14px repeat(3,minmax(0,1fr));gap:6px}.booking-panel{max-height:94vh}}
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <div class="glass-card">
-            <h2>SkyBound AI</h2>
-            <div class="form-group">
-                <label>Hoac nhap yeu cau bang tieng Viet</label>
-                <textarea id="textRequest" rows="2" placeholder="Vi du: Toi muon di tu Ha Noi den Singapore ngay 22/03/2026, ngan sach 4 trieu dong."></textarea>
-                <div class="prompt-hint">Goi y: neu ban nhap qua mo ho, AI se can them san bay gan ban, ngay bay va ngan sach.</div>
-                <div id="ai-feedback" class="ai-feedback"></div>
-                <div id="ai-suggestion-list" class="ai-suggestion-list"></div>
-                <div class="prompt-list">
-                    <button type="button" class="prompt-chip" onclick="fillPromptAndSearch('Toi muon bay tu Ha Noi den Singapore ngay 21/03/2026, ngan sach 4 trieu')">Ha Noi -> Singapore</button>
-                    <button type="button" class="prompt-chip" onclick="fillPromptAndSearch('Toi muon bay tu TP. Ho Chi Minh den Bangkok ngay 25/03/2026, ngan sach 3 trieu')">TP.HCM -> Bangkok</button>
-                    <button type="button" class="prompt-chip" onclick="fillPromptAndSearch('Toi muon bay tu Da Nang den Ha Noi ngay 22/03/2026, ngan sach 2 trieu')">Da Nang -> Ha Noi</button>
+    <div class="page" id="trang-chu">
+        <header class="topbar">
+            <div class="brand">
+                <div class="logo">SB</div>
+                <div>
+                    <strong>SkyBound AI</strong>
+                    <span>Tìm lịch bay thật, tư vấn AI và demo đặt vé</span>
                 </div>
-                <button onclick="searchByText()">Tim bang AI</button>
             </div>
-            <hr>
-            <div class="form-group">
-                <label>Kieu hanh trinh</label>
-                <select id="tripType" onchange="updateTripTypeUI()">
-                    <option value="oneway">1 chieu</option>
-                    <option value="roundtrip">Khu hoi</option>
-                    <option value="multicity">Nhieu chang</option>
-                </select>
-            </div>
+            <nav class="nav-links">
+                <a href="#trang-chu">Trang chủ</a>
+                <a href="#cong-cu">Công cụ</a>
+                <a href="#cach-hoat-dong">Cách hoạt động</a>
+                <a href="#ve-chung-toi">Về chúng tôi</a>
+            </nav>
+            <a class="nav-cta" href="#cong-cu">Mở công cụ</a>
+        </header>
 
-            <div id="single-trip-fields">
-                <div class="grid-2">
+        <section class="hero">
+            <aside class="hero-card">
+                <div class="eyebrow">Trải nghiệm rõ ràng hơn</div>
+                <h1>Tìm chuyến bay đỡ rối, bớt nhập lại, dễ đi tiếp tới bước đặt vé.</h1>
+                <p>SkyBound AI được làm để bạn có thể mô tả chặng bay bằng tiếng Việt, nhận kết quả dễ hiểu và mở nhanh sang website hãng thay vì phải đi qua nhiều bước trung gian.</p>
+                <div class="hero-points">
+                    <div class="point"><strong>Nhập tự nhiên bằng tiếng Việt</strong><span>Bạn có thể gõ kiểu “Tôi muốn bay từ Hà Nội đến Singapore ngày 29/03, ngân sách 4 triệu”.</span></div>
+                    <div class="point"><strong>Biết lúc nào yêu cầu còn mơ hồ</strong><span>Nếu điểm đi hoặc điểm đến quá rộng, hệ thống sẽ gợi ý prompt cụ thể hơn ngay trong giao diện.</span></div>
+                    <div class="point"><strong>Demo trọn luồng đặt vé</strong><span>Sau khi tìm được chuyến phù hợp, bạn có thể đi tiếp qua chọn ghế, thanh toán giả lập và nhận e-ticket trước khi mở website hãng thật.</span></div>
+                </div>
+                <div class="stats">
+                    <div class="stat"><strong>Thật hơn</strong><span>Dữ liệu ưu tiên theo nguồn lịch bay thực được provider hỗ trợ.</span></div>
+                    <div class="stat"><strong>Gọn hơn</strong><span>Prompt mẫu và form rõ ràng giúp thao tác nhanh hơn.</span></div>
+                    <div class="stat"><strong>Dễ hiểu</strong><span>Có thanh điều hướng, giải thích luồng và phần giới thiệu rõ ràng.</span></div>
+                </div>
+            </aside>
+
+            <div id="cong-cu">
+                <div class="glass-card">
+                    <div class="app-head">
+                        <h2>Tra cứu chuyến bay</h2>
+                        <p>Nhập yêu cầu bằng tiếng Việt hoặc chọn trực tiếp chặng bay, ngày đi và kiểu hành trình. Sau khi có kết quả, bạn còn có thể lọc nhanh, xem tư vấn AI và đi tiếp vào luồng đặt vé giả lập trọn vẹn.</p>
+                    </div>
+
                     <div class="form-group">
-                        <label>Khoi hanh</label>
-                        <select id="fromLoc">
-                            <option value="HAN">Ha Noi (HAN)</option>
-                            <option value="SGN">TP. Ho Chi Minh (SGN)</option>
-                            <option value="DAD">Da Nang (DAD)</option>
+                        <label for="textRequest">Hoặc nhập yêu cầu bằng tiếng Việt</label>
+                        <textarea id="textRequest" rows="2" placeholder="Ví dụ: Tôi muốn đi từ Hà Nội đến Singapore ngày 29/03/2026, ngân sách 4 triệu đồng."></textarea>
+                        <div id="prompt-hint" class="prompt-hint">Gợi ý: nếu bạn nhập quá mơ hồ, AI sẽ cần thêm sân bay gần bạn, ngày bay và ngân sách.</div>
+                        <div id="ai-feedback" class="ai-feedback"></div>
+                        <div id="ai-suggestion-list" class="ai-suggestion-list"></div>
+                        <div class="prompt-list">
+                            <button type="button" id="prompt-chip-1" class="prompt-chip"></button>
+                            <button type="button" id="prompt-chip-2" class="prompt-chip"></button>
+                            <button type="button" id="prompt-chip-3" class="prompt-chip"></button>
+                        </div>
+                        <button onclick="searchByText()">Tìm bằng AI</button>
+                    </div>
+
+                    <hr>
+
+                    <div class="form-group">
+                        <label for="tripType">Kiểu hành trình</label>
+                        <select id="tripType" onchange="updateTripTypeUI()">
+                            <option value="oneway">Một chiều</option>
+                            <option value="roundtrip">Khứ hồi</option>
+                            <option value="multicity">Nhiều chặng</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Diem den</label>
-                        <select id="toLoc">
-                            <option value="SIN">Singapore (SIN)</option>
-                            <option value="BKK">Bangkok (BKK)</option>
-                            <option value="SGN">TP. Ho Chi Minh (SGN)</option>
-                            <option value="HAN">Ha Noi (HAN)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Ngay di</label>
-                        <input type="date" id="flyDate">
-                    </div>
-                    <div class="form-group hidden" id="return-date-group">
-                        <label>Ngay ve</label>
-                        <input type="date" id="returnDate">
-                    </div>
-                </div>
-            </div>
 
-            <div id="multi-trip-fields" class="hidden">
-                <div id="multi-leg-list"></div>
-                <button type="button" class="secondary-btn" onclick="addMultiCityLeg()">Them chang</button>
-            </div>
+                    <div id="single-trip-fields">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="fromLoc">Khởi hành</label>
+                                <select id="fromLoc">
+                                    <option value="HAN">Hà Nội (HAN)</option>
+                                    <option value="SGN">TP. Hồ Chí Minh (SGN)</option>
+                                    <option value="DAD">Đà Nẵng (DAD)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="toLoc">Điểm đến</label>
+                                <select id="toLoc">
+                                    <option value="SIN">Singapore (SIN)</option>
+                                    <option value="BKK">Bangkok (BKK)</option>
+                                    <option value="SGN">TP. Hồ Chí Minh (SGN)</option>
+                                    <option value="HAN">Hà Nội (HAN)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group"><label for="flyDate">Ngày đi</label><input type="date" id="flyDate"></div>
+                            <div class="form-group hidden" id="return-date-group"><label for="returnDate">Ngày về</label><input type="date" id="returnDate"></div>
+                        </div>
+                    </div>
 
-            <div class="form-group">
-                <label>Ngan sach toi da (VND)</label>
-                <input type="number" id="budget" value="3000000">
+                    <div id="multi-trip-fields" class="hidden">
+                        <div id="multi-leg-list"></div>
+                        <button type="button" class="secondary-btn" onclick="addMultiCityLeg()">Thêm chặng</button>
+                    </div>
+
+                    <div class="form-group"><label for="budget">Ngân sách tối đa (VND)</label><input type="number" id="budget" value="3000000"></div>
+                    <button onclick="searchByForm()">Tìm kiếm chính xác</button>
+                </div>
+
+                <div id="loading" class="loading">Đang tìm chuyến bay...</div>
+                <div id="result-area"></div>
             </div>
-            <button onclick="searchByForm()">Tim kiem chinh xac</button>
-        </div>
-        <div id="loading" class="loading">Dang tim chuyen bay...</div>
-        <div id="result-area"></div>
+        </section>
+
+        <section class="info-section" id="cach-hoat-dong">
+            <div class="section-heading"><span>Quy trình</span><h2>Cách SkyBound AI hoạt động</h2><p>Hệ thống kết hợp prompt tiếng Việt, kiểm tra độ rõ của yêu cầu và hiển thị kết quả theo từng chặng để bạn biết mình đang tìm gì và còn thiếu điều gì.</p></div>
+            <div class="feature-grid">
+                <article class="info-card"><strong>1. Hiểu ý định</strong><p>Ô AI bóc tách chặng bay, ngày đi, ngân sách và hỏi lại khi mô tả còn quá rộng.</p></article>
+                <article class="info-card"><strong>2. Nói rõ giới hạn dữ liệu</strong><p>Nếu provider chưa hỗ trợ ngày bạn chọn, giao diện sẽ báo minh bạch thay vì nhét dữ liệu mẫu gây hiểu lầm.</p></article>
+                <article class="info-card"><strong>3. Đi hết flow rồi mới mở hãng</strong><p>Kết quả giờ có thể đi qua booking modal 4 bước để demo end-to-end, rồi mới mở website hãng ở chặng cuối nếu cần đối chiếu.</p></article>
+            </div>
+        </section>
+
+        <section class="info-section" id="ve-chung-toi">
+            <div class="section-heading"><span>About Us</span><h2>Về chúng tôi</h2><p>SkyBound AI được xây theo hướng thực dụng: giảm thao tác thừa, nói rõ giới hạn dữ liệu và giúp người dùng tiến gần hơn tới bước đặt vé thật thay vì chỉ xem một danh sách đẹp nhưng khó dùng tiếp.</p></div>
+            <div class="about-grid">
+                <article class="about-card"><strong>Ưu tiên</strong><p>Trả kết quả có nguồn gốc rõ ràng, hạn chế dữ liệu mẫu và giúp người dùng hiểu điều gì đang được hỗ trợ thật.</p></article>
+                <article class="about-card"><strong>Cải tiến hiện tại</strong><p>Giao diện có dấu, thanh điều hướng, prompt gợi ý rõ hơn và phần mô tả giúp người mới dùng không bị ngợp.</p></article>
+                <article class="about-card"><strong>Bước tiếp theo</strong><p>Chuẩn hóa thông báo động có dấu sâu hơn, làm giàu deep-link theo ngày và tiếp tục cải thiện trải nghiệm nhiều chặng.</p></article>
+            </div>
+        </section>
+
+        <footer class="footer">SkyBound AI · Giao diện tra cứu chuyến bay, tư vấn AI và mô phỏng đặt vé trọn vẹn cho demo.</footer>
     </div>
+
+    <div id="booking-modal" class="booking-modal hidden" aria-hidden="true"></div>
 
     <script>
         const airportOptions = `
-            <option value="HAN">Ha Noi (HAN)</option>
-            <option value="SGN">TP. Ho Chi Minh (SGN)</option>
-            <option value="DAD">Da Nang (DAD)</option>
+            <option value="HAN">Hà Nội (HAN)</option>
+            <option value="SGN">TP. Hồ Chí Minh (SGN)</option>
+            <option value="DAD">Đà Nẵng (DAD)</option>
             <option value="SIN">Singapore (SIN)</option>
             <option value="BKK">Bangkok (BKK)</option>
         `;
-
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowValue = tomorrow.toISOString().split('T')[0];
-        const dayAfterTomorrow = new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0];
-
-        document.getElementById('flyDate').value = tomorrowValue;
-        document.getElementById('returnDate').value = dayAfterTomorrow;
-
-        function createMultiLeg(index, defaults = {}) {
-            return `
-                <div class="multi-leg" data-leg-index="${index}">
-                    <div class="meta">Chang ${index + 1}</div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>Khoi hanh</label>
-                            <select class="leg-from">${airportOptions}</select>
-                        </div>
-                        <div class="form-group">
-                            <label>Diem den</label>
-                            <select class="leg-to">${airportOptions}</select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Ngay di</label>
-                        <input type="date" class="leg-date" value="${defaults.date || tomorrowValue}">
-                    </div>
-                </div>
-            `;
+        const formatDateInputValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const today = new Date();
+        const earliestSupportedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        earliestSupportedDate.setDate(earliestSupportedDate.getDate() + 8);
+        const nextSupportedDate = new Date(earliestSupportedDate.getFullYear(), earliestSupportedDate.getMonth(), earliestSupportedDate.getDate() + 1);
+        const earliestSupportedValue = formatDateInputValue(earliestSupportedDate);
+        const nextSupportedValue = formatDateInputValue(nextSupportedDate);
+        const formatPromptDate = (dateValue) => { const [year, month, day] = dateValue.split('-'); return `${day}/${month}/${year}`; };
+        const formatDisplayDate = (dateValue) => /^\d{4}-\d{2}-\d{2}$/.test(dateValue || '') ? dateValue.split('-').reverse().join('/') : (dateValue || '--');
+        function formatDateTimeValue(value) {
+            if (!value) return '--';
+            const parsed = new Date(String(value).trim());
+            return Number.isNaN(parsed.getTime()) ? String(value).trim() : parsed.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
         }
+        function beautifyDynamicText(text = '') {
+            const repairMojibake = (value = '') => {
+                const source = String(value);
+                if (!/[ÃÂÄÆáºá»]/.test(source)) return source;
+                try {
+                    return decodeURIComponent(escape(source));
+                } catch (error) {
+                    return source;
+                }
+            };
 
+            const normalizedText = repairMojibake(text);
+            const replacements = [
+                ['Yeu cau cua ban con mo ho.', 'Yêu cầu của bạn còn mơ hồ.'], ['Vui long', 'Vui lòng'], ['Neu khong', 'Nếu không'],
+                ['he thong', 'hệ thống'], ['mac dinh', 'mặc định'], ['ngan sach', 'ngân sách'], ['Nguon du lieu lich bay that', 'Nguồn dữ liệu lịch bay thật'],
+                ['hien chi ho tro tim tu', 'hiện chỉ hỗ trợ tìm từ'], ['tro di', 'trở đi'], ['Khong tim thay lich bay that', 'Không tìm thấy lịch bay thật'],
+                ['Khong lay duoc du lieu lich bay that', 'Không lấy được dữ liệu lịch bay thật'], ['Provider tra ve', 'Provider trả về'],
+                ['Tim chuyen bay dat ve cho', 'Tìm chuyến bay đặt vé cho'], ['da qua', 'đã qua'], ['Diem di va diem den cua', 'Điểm đi và điểm đến của'],
+                ['khong the giong nhau', 'không thể giống nhau'], ['Ngay bay cua', 'Ngày bay của'], ['khong hop le', 'không hợp lệ'],
+                ['Thieu thong tin cho', 'Thiếu thông tin cho'], ['Ban dang ghi diem di la Viet Nam.', 'Bạn đang ghi điểm đi là Việt Nam.'],
+                ['Ban dang ghi diem den la Viet Nam.', 'Bạn đang ghi điểm đến là Việt Nam.'], ['Ban muon khoi hanh gan san bay nao nhat?', 'Bạn muốn khởi hành gần sân bay nào nhất?'],
+                ['Ban muon ha canh o san bay nao?', 'Bạn muốn hạ cánh ở sân bay nào?'], ['Gia can kiem tra truc tiep tren website cua hang.', 'Giá cần kiểm tra trực tiếp trên website của hãng.'],
+                ['Tim thay lich bay that cho ngay', 'Tìm thấy lịch bay thật cho ngày'], ['App chua co link mo trang hang tu dong cho', 'App chưa có link mở trang hãng tự động cho'],
+                ['vui long tim theo ten hang va so hieu chuyen bay.', 'vui lòng tìm theo tên hãng và số hiệu chuyến bay.'], ['Mot chieu', 'Một chiều'], ['Luot di', 'Lượt đi'], ['Luot ve', 'Lượt về'], ['Chang ', 'Chặng '],
+                ['Ha Noi', 'Hà Nội'], ['TP. Ho Chi Minh', 'TP. Hồ Chí Minh'], ['Da Nang', 'Đà Nẵng'], ['Viet Nam', 'Việt Nam'],
+                ['Thai Lan', 'Thái Lan'], ['Quoc te', 'Quốc tế'], ['tam thoi', 'tạm thời'], ['goi y', 'gợi ý'],
+                ['tiet kiem', 'tiết kiệm'], ['chi phi', 'chi phí'], ['mien phi', 'miễn phí'], ['uu tien', 'ưu tiên'],
+                ['hanh trinh', 'hành trình'], ['di chuyen', 'di chuyển'], ['thoi tiet', 'thời tiết'], ['du bao', 'dự báo'],
+                ['gan ngay di', 'gần ngày đi'], ['mot tui nho gon gang', 'một túi nhỏ gọn gàng'], ['phuong tien cong cong', 'phương tiện công cộng'],
+                ['khung gio it dong', 'khung giờ ít đông'], ['day la goi y fallback', 'đây là gợi ý fallback'], ['dang tai cham mot nhip', 'đang tải chậm một nhịp'],
+                ['Minh tam thoi dua mot vai goi y an toan de ban van co the demo tron ven luong nguoi dung.', 'Mình tạm thời đưa một vài gợi ý an toàn để bạn vẫn có thể demo trọn vẹn luồng người dùng.'],
+                ['Provider dang bi gioi han request', 'Provider đang bị giới hạn request'], ['Day la du lieu mo phong', 'Đây là dữ liệu mô phỏng'],
+                ['khong phai lich bay that', 'không phải lịch bay thật'], ['rate limit', 'giới hạn lượt gọi'], ['fallback', 'fallback']
+            ];
+            return replacements.reduce((currentText, [from, to]) => currentText.replaceAll(from, to), normalizedText);
+        }
+        const promptExamples = [
+            { label: 'Hà Nội → Singapore', prompt: `Tôi muốn bay từ Hà Nội đến Singapore ngày ${formatPromptDate(earliestSupportedValue)}, ngân sách 4 triệu` },
+            { label: 'TP.HCM → Bangkok', prompt: `Tôi muốn bay từ TP. Hồ Chí Minh đến Bangkok ngày ${formatPromptDate(earliestSupportedValue)}, ngân sách 3 triệu` },
+            { label: 'Đà Nẵng → Hà Nội', prompt: `Tôi muốn bay từ Đà Nẵng đến Hà Nội ngày ${formatPromptDate(nextSupportedValue)}, ngân sách 2 triệu` }
+        ];
+        document.getElementById('flyDate').value = earliestSupportedValue;
+        document.getElementById('flyDate').min = earliestSupportedValue;
+        document.getElementById('returnDate').value = nextSupportedValue;
+        document.getElementById('returnDate').min = earliestSupportedValue;
+        document.getElementById('textRequest').placeholder = `Ví dụ: Tôi muốn đi từ Hà Nội đến Singapore ngày ${formatPromptDate(earliestSupportedValue)}, ngân sách 4 triệu đồng.`;
+        document.getElementById('prompt-hint').textContent = `Gợi ý: nguồn lịch bay thật hiện thường chỉ hỗ trợ tìm từ ${formatPromptDate(earliestSupportedValue)} trở đi.`;
+        promptExamples.forEach((example, index) => {
+            const button = document.getElementById(`prompt-chip-${index + 1}`);
+            button.textContent = example.label;
+            button.onclick = () => fillPromptAndSearch(example.prompt);
+        });
+        function createMultiLeg(index, defaults = {}) {
+            return `<div class="multi-leg" data-leg-index="${index}"><div class="meta">Chặng ${index + 1}</div><div class="grid-2"><div class="form-group"><label>Khởi hành</label><select class="leg-from">${airportOptions}</select></div><div class="form-group"><label>Điểm đến</label><select class="leg-to">${airportOptions}</select></div></div><div class="form-group"><label>Ngày đi</label><input type="date" class="leg-date" min="${earliestSupportedValue}" value="${defaults.date || earliestSupportedValue}"></div></div>`;
+        }
         function seedMultiLegs() {
             const list = document.getElementById('multi-leg-list');
-            list.innerHTML = createMultiLeg(0, { date: tomorrowValue }) + createMultiLeg(1, { date: dayAfterTomorrow });
+            list.innerHTML = createMultiLeg(0, { date: earliestSupportedValue }) + createMultiLeg(1, { date: nextSupportedValue });
             const legs = list.querySelectorAll('.multi-leg');
             legs[0].querySelector('.leg-from').value = 'HAN';
             legs[0].querySelector('.leg-to').value = 'SGN';
             legs[1].querySelector('.leg-from').value = 'SGN';
             legs[1].querySelector('.leg-to').value = 'BKK';
         }
-
         function addMultiCityLeg() {
             const list = document.getElementById('multi-leg-list');
-            const nextIndex = list.querySelectorAll('.multi-leg').length;
-            list.insertAdjacentHTML('beforeend', createMultiLeg(nextIndex, { date: dayAfterTomorrow }));
+            list.insertAdjacentHTML('beforeend', createMultiLeg(list.querySelectorAll('.multi-leg').length, { date: nextSupportedValue }));
         }
-
         function updateTripTypeUI() {
             const tripType = document.getElementById('tripType').value;
             document.getElementById('single-trip-fields').classList.toggle('hidden', tripType === 'multicity');
             document.getElementById('multi-trip-fields').classList.toggle('hidden', tripType !== 'multicity');
             document.getElementById('return-date-group').classList.toggle('hidden', tripType !== 'roundtrip');
         }
-
-        function formatPrice(price) {
-            if (price === null || price === undefined) {
-                return '<div class="price muted">Xem gia truc tiep tren website hang</div>';
-            }
-            return `<div class="price">${price.toLocaleString()} VND</div>`;
-        }
-
-        function formatTimeInfo(flight) {
-            if (!flight.departure && !flight.arrival) return '';
-            return `<div class="meta">Gio bay: ${flight.departure || '--'} -> ${flight.arrival || '--'}</div>`;
-        }
-
+        const formatPrice = (price) => price === null || price === undefined ? '<div class="price muted">Xem giá trực tiếp trên website hãng</div>' : `<div class="price">${price.toLocaleString('vi-VN')} VND</div>`;
+        const formatTimeInfo = (flight) => !flight.departure && !flight.arrival ? '' : `<div class="meta">Giờ bay: ${formatDateTimeValue(flight.departure)} → ${formatDateTimeValue(flight.arrival)}</div>`;
         function formatBookingHost(url) {
-            try {
-                const host = new URL(url).hostname;
-                return `<div class="meta">Link dat ve: ${host}</div>`;
-            } catch {
-                return `<div class="meta">Link dat ve: ${url}</div>`;
-            }
+            if (!url) return '<div class="meta">Link đặt vé: chưa map được tự động</div>';
+            try { return `<div class="meta">Link đặt vé: ${new URL(url).hostname}</div>`; } catch { return `<div class="meta">Link đặt vé: ${url}</div>`; }
         }
-
         function formatBudgetPill(flight) {
-            if (flight.withinBudget === true) return '<div class="budget-pill ok">Trong ngan sach</div>';
-            if (flight.withinBudget === false) return '<div class="budget-pill over">Vuot ngan sach</div>';
-            return '<div class="budget-pill unknown">Can xem gia truc tiep</div>';
+            if (flight.withinBudget === true) return '<div class="budget-pill ok">Trong ngân sách</div>';
+            if (flight.withinBudget === false) return '<div class="budget-pill over">Vượt ngân sách</div>';
+            return '<div class="budget-pill unknown">Cần xem giá trực tiếp</div>';
         }
-
-        function formatRouteCta(flight) {
-            if (!flight.routeLink) {
-                return '<span class="cta secondary disabled">Hang chua ho tro route page</span>';
-            }
-            return `<a href="${flight.routeLink}" target="_blank" rel="noopener noreferrer" class="cta secondary">Mo page chang tren hang</a>`;
-        }
-
-        function fillPrompt(value) {
-            document.getElementById('textRequest').value = value;
-            document.getElementById('textRequest').focus();
-        }
-
-        async function fillPromptAndSearch(value) {
-            fillPrompt(value);
-            await searchByText();
-        }
-
+        const formatRouteCta = (flight) => !flight.routeLink ? '<span class="cta secondary disabled">Hãng chưa hỗ trợ route page</span>' : `<a href="${flight.routeLink}" target="_blank" rel="noopener noreferrer" class="cta secondary">Mở page chặng trên hãng</a>`;
+        const formatAirlineCta = (flight) => !flight.bookingLink ? '<span class="cta disabled">Chưa có link trang hãng</span>' : `<a href="${flight.bookingLink}" target="_blank" rel="noopener noreferrer" class="cta">Mở trang hãng</a>`;
+        function fillPrompt(value) { document.getElementById('textRequest').value = value; document.getElementById('textRequest').focus(); }
+        async function fillPromptAndSearch(value) { fillPrompt(value); await searchByText(); }
         function setAiFeedback(message = '') {
             const box = document.getElementById('ai-feedback');
-            if (!message) {
-                box.style.display = 'none';
-                box.textContent = '';
-                return;
-            }
-            box.textContent = message;
+            if (!message) { box.style.display = 'none'; box.textContent = ''; return; }
+            box.textContent = beautifyDynamicText(message);
             box.style.display = 'block';
         }
-
         function setAiSuggestions(suggestions = []) {
             const list = document.getElementById('ai-suggestion-list');
-            if (!suggestions.length) {
-                list.style.display = 'none';
-                list.innerHTML = '';
-                return;
-            }
-            list.innerHTML = suggestions.map(
-                suggestion => `<button type="button" class="prompt-chip" onclick="fillPromptAndSearch(${JSON.stringify(suggestion).replace(/"/g, '&quot;')})">${suggestion}</button>`
-            ).join('');
+            if (!suggestions.length) { list.style.display = 'none'; list.innerHTML = ''; return; }
+            list.innerHTML = suggestions.map((suggestion) => {
+                const formatted = beautifyDynamicText(suggestion);
+                return `<button type="button" class="prompt-chip" onclick="fillPromptAndSearch(${JSON.stringify(formatted).replace(/"/g, '&quot;')})">${formatted}</button>`;
+            }).join('');
             list.style.display = 'flex';
+        }
+        function renderFlightCard(section, flight) {
+            const isOfficialFuture = section.dataSource === 'official-future';
+            const statusLabel = isOfficialFuture ? 'Lịch bay thật theo ngày từ provider' : (section.exact ? 'Kết quả chặng bay' : 'Lịch bay tham khảo');
+            return `<div class="result-card"><div class="tag-header ${isOfficialFuture || section.exact ? '' : 'reference'}"><span>${flight.airline} - ${flight.flightNumber}</span><span class="flight-date-badge">${formatDisplayDate(flight.flightDate)}</span></div><div class="card-body"><div class="route"><span>${section.from}</span><span>→</span><span>${section.to}</span></div><div class="meta">${statusLabel}</div>${formatBudgetPill(flight)}${formatTimeInfo(flight)}${formatBookingHost(flight.bookingLink)}${flight.routeLink ? '<div class="meta">Lưu ý: page chặng của hãng có thể không giữ đúng ngày bạn đã chọn.</div>' : ''}${formatPrice(flight.price)}<div class="ai-reason">${beautifyDynamicText(flight.note || 'Đang cập nhật thông tin chuyến bay.')}</div><div class="cta-group">${formatAirlineCta(flight)}${formatRouteCta(flight)}</div></div></div>`;
+        }
+        async function searchByText() {
+            const text = document.getElementById('textRequest').value.trim();
+            if (!text) { alert('Vui lòng nhập yêu cầu.'); return; }
+            setAiFeedback(''); setAiSuggestions([]); await search({ text, tripType: 'oneway' });
+        }
+        const collectMultiCityLegs = () => [...document.querySelectorAll('.multi-leg')].map((leg) => ({ from: leg.querySelector('.leg-from').value, to: leg.querySelector('.leg-to').value, date: leg.querySelector('.leg-date').value }));
+        async function searchByForm() {
+            const tripType = document.getElementById('tripType').value;
+            const budget = parseInt(document.getElementById('budget').value, 10);
+            if (tripType === 'multicity') {
+                const legs = collectMultiCityLegs();
+                if (legs.some((leg) => !leg.from || !leg.to || !leg.date)) { alert('Vui lòng điền đủ thông tin cho mỗi chặng.'); return; }
+                await search({ tripType, legs, budget }); return;
+            }
+            const from = document.getElementById('fromLoc').value;
+            const to = document.getElementById('toLoc').value;
+            const date = document.getElementById('flyDate').value;
+            const returnDate = document.getElementById('returnDate').value;
+            if (!from || !to || !date) { alert('Vui lòng điền đầy đủ thông tin.'); return; }
+            if (tripType === 'roundtrip' && !returnDate) { alert('Vui lòng chọn ngày về.'); return; }
+            await search({ tripType, from, to, date, returnDate, budget });
+        }
+        async function search(body) {
+            const loading = document.getElementById('loading');
+            const resultArea = document.getElementById('result-area');
+            loading.style.display = 'block'; resultArea.style.display = 'none'; resultArea.innerHTML = '';
+            try {
+                const response = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const data = await response.json(); loading.style.display = 'none';
+                if (!data.success) {
+                    if (body.text && (data.needsClarification || (data.message || '').includes('Thieu thong tin'))) {
+                        setAiFeedback(data.message); setAiSuggestions(data.suggestionPrompts || []); resultArea.style.display = 'none'; return;
+                    }
+                    resultArea.innerHTML = `<div class="error-message">${beautifyDynamicText(data.message)}</div>`; resultArea.style.display = 'block'; return;
+                }
+                setAiFeedback(''); setAiSuggestions([]);
+                const sectionsHtml = data.sections.map((section) => {
+                    const sectionSummary = section.dataSource === 'official-future' ? `${section.flights.length} lịch bay thật theo ngày` : (section.exact ? `${section.flights.length} chuyến, ${section.budgetMatches} chuyến trong ngân sách` : `${section.flights.length} lịch bay đúng ngày`);
+                    return `<div class="section-card"><div class="section-title">${beautifyDynamicText(section.title)}: ${section.from} → ${section.to} | ${formatDisplayDate(section.date)}</div><div class="result-note">${sectionSummary}</div>${section.flights.map((flight) => renderFlightCard(section, flight)).join('')}</div>`;
+                }).join('');
+                resultArea.innerHTML = `${sectionsHtml}<div class="result-note">Tổng cộng ${data.summary.totalFlights} kết quả trên ${data.summary.totalSections} chặng.</div>`;
+                resultArea.style.display = 'block';
+            } catch (error) {
+                loading.style.display = 'none';
+                resultArea.innerHTML = '<div class="error-message">Không kết nối được backend. Hãy chạy `node server.js` và mở trang bằng `http://localhost:3001`.</div>';
+                resultArea.style.display = 'block';
+                console.error(error);
+            }
+        }
+        seedMultiLegs(); updateTripTypeUI();
+    </script>
+    <script>
+        const DESTINATION_VISUALS_MAP = {
+            HAN: {
+                name: 'Hà Nội',
+                tagline: 'Phố cổ, cà phê và nhịp sống giàu chiều sâu.',
+                image: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?q=80&w=1974&auto=format&fit=crop'
+            },
+            SGN: {
+                name: 'TP. Hồ Chí Minh',
+                tagline: 'Năng lượng thành phố lớn, đồ ăn ngon và nhịp sống nhanh.',
+                image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=1974&auto=format&fit=crop'
+            },
+            DAD: {
+                name: 'Đà Nẵng',
+                tagline: 'Biển, cầu và những chặng nghỉ ngắn ngày rất dễ chịu.',
+                image: 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1974&auto=format&fit=crop'
+            },
+            SIN: {
+                name: 'Singapore',
+                tagline: 'Hiện đại, dễ đi bộ và nhiều điểm tham quan miễn phí.',
+                image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?q=80&w=2070&auto=format&fit=crop'
+            },
+            BKK: {
+                name: 'Bangkok',
+                tagline: 'Đền chùa, chợ đêm và những cung đường mua sắm không ngủ.',
+                image: 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?q=80&w=2070&auto=format&fit=crop'
+            }
+        };
+
+        const ERROR_COPY_MAP = {
+            input_missing: { title: 'Máy bay đang chờ bạn điền thêm một chút', tip: 'Kiểm tra lại điểm đi, điểm đến và ngày bay rồi thử lại nhé.' },
+            same_airport: { title: 'Hai đầu sân bay đang trùng nhau rồi', tip: 'Đổi sang một điểm đến khác để app tìm ra hành trình hợp lý hơn.' },
+            invalid_date: { title: 'Ngày bay này đang làm radar rối một chút', tip: 'Chọn lại ngày hợp lệ để hệ thống tiếp tục tra cứu.' },
+            future_window_not_supported: { title: 'Nguồn lịch bay thật hẹn bạn một ngày khác', tip: 'Hãy chọn ngày muộn hơn trong khung được provider hỗ trợ.' },
+            past_date: { title: 'Ngày này đã cất cánh từ lâu rồi', tip: 'Đổi sang ngày hiện tại hoặc tương lai để tiếp tục demo.' },
+            no_flights: { title: 'Chặng này hôm nay hơi trốn dữ liệu', tip: 'Bạn có thể thử đổi ngày hoặc đổi chặng để xem thêm kết quả.' },
+            provider_rate_limited: { title: 'Provider đang chạm giới hạn lượt gọi', tip: 'Nếu chặng phổ biến có sẵn fallback, app sẽ tự chuyển sang dữ liệu demo minh bạch để bạn tiếp tục trình bày.' },
+            provider_failure: { title: 'Provider đang hơi mệt một nhịp', tip: 'Thử lại sau ít phút hoặc chuyển sang ngày khác để tiếp tục demo.' },
+            server_failure: { title: 'Backend vừa gặp một cơn gió ngang', tip: 'Mở terminal chạy server.js để xem dòng lỗi mới nhất rồi thử lại.' },
+            consultant_failure: { title: 'Trợ lý du lịch vừa cần nghỉ giải lao', tip: 'Kết quả chuyến bay vẫn dùng được, còn consultant có thể thử lại sau.' },
+            multicity_too_short: { title: 'Một chuyến multi-city mà mới có một chặng thì hơi buồn', tip: 'Thêm ít nhất một chặng nữa để luồng nhiều chặng hiển thị đầy đủ.' },
+            consultant_missing_sections: { title: 'AI consultant đang chờ bạn tìm chuyến trước đã', tip: 'Có kết quả chặng bay rồi thì app mới có ngữ cảnh để tư vấn.' },
+            default: { title: 'Có một nhiễu động nhỏ vừa xuất hiện', tip: 'Thử lại một lần nữa, rất có thể chuyến đi sẽ mượt hơn ở lượt sau.' }
+        };
+
+        const FILTER_OPTIONS_CONFIG = [
+            { id: 'all', label: 'Tất cả' },
+            { id: 'cheapest', label: 'Giá rẻ nhất' },
+            { id: 'earliest', label: 'Bay sớm nhất' },
+            { id: 'vna', label: 'Vietnam Airlines' }
+        ];
+
+        const ENHANCED_APP_STATE = {
+            currentResults: null,
+            activeFilter: 'all',
+            consultantState: { status: 'idle', data: null },
+            renderedFlightMap: {},
+            bookingModalState: null
+        };
+
+        function getDestinationVisualCard(code) {
+            return DESTINATION_VISUALS_MAP[code] || {
+                name: code,
+                tagline: 'Một điểm đến mới đang chờ bạn khám phá.',
+                image: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=1974&auto=format&fit=crop'
+            };
+        }
+
+        function getErrorPresentationCard(errorType, message, tip) {
+            const config = ERROR_COPY_MAP[errorType] || ERROR_COPY_MAP.default;
+            return {
+                title: config.title,
+                message: beautifyDynamicText(message || ''),
+                tip: beautifyDynamicText(tip || config.tip)
+            };
+        }
+
+        function hashStringEnhanced(value = '') {
+            let hash = 0;
+            for (let index = 0; index < value.length; index += 1) {
+                hash = (hash * 31 + value.charCodeAt(index)) % 2147483647;
+            }
+            return Math.abs(hash);
+        }
+
+        function buildFlightSeedValue(section, flight) {
+            return `${section.from}-${section.to}-${flight.flightDate}-${flight.flightNumber}-${flight.airline}`;
+        }
+
+        function generateFlightDemoPrice(section, flight) {
+            if (flight.price !== null && flight.price !== undefined) {
+                return { amount: flight.price, isMock: false };
+            }
+            const seed = hashStringEnhanced(buildFlightSeedValue(section, flight));
+            const amount = 1900000 + ((seed % 42) * 95000);
+            return { amount: Math.round(amount / 50000) * 50000, isMock: true };
+        }
+
+        function getFlightMinutesValue(value) {
+            if (!value) return Number.MAX_SAFE_INTEGER;
+            const parsedDate = new Date(String(value).trim());
+            if (!Number.isNaN(parsedDate.getTime())) {
+                return parsedDate.getHours() * 60 + parsedDate.getMinutes();
+            }
+            const match = String(value).match(/(\d{1,2}):(\d{2})/);
+            return match ? (parseInt(match[1], 10) * 60 + parseInt(match[2], 10)) : Number.MAX_SAFE_INTEGER;
+        }
+
+        function buildLocalConsultantFallbackCard(results) {
+            if (!results?.sections?.length) return null;
+            const seen = new Set();
+            const destinations = results.sections
+                .map(section => section.to)
+                .filter(code => {
+                    if (seen.has(code)) return false;
+                    seen.add(code);
+                    return true;
+                })
+                .map(code => {
+                    const visual = getDestinationVisualCard(code);
+                    return {
+                        airportCode: code,
+                        city: visual.name,
+                        overview: `${visual.name} là điểm đến hợp để bổ sung thêm vài ghi chú du lịch ngay trong phần demo.`,
+                        weatherTip: `Hãy kiểm tra dự báo thời tiết gần ngày đi đến ${visual.name}.`,
+                        packingTip: `Mang theo quần áo dễ di chuyển, sạc dự phòng và một túi gọn cho lịch trình tại ${visual.name}.`,
+                        budgetIdeas: [
+                            `Thử tìm các điểm tham quan miễn phí tại ${visual.name}.`,
+                            'Đặt trước các khoản chi lớn để giữ ngân sách ổn định.',
+                            'Ưu tiên đi bộ hoặc phương tiện công cộng nếu muốn tiết kiệm.'
+                        ],
+                        warning: 'Đây là gợi ý fallback khi AI consultant tạm thời chưa trả về kết quả.'
+                    };
+                });
+
+            return {
+                title: 'AI Travel Consultant đang lấy đà một chút',
+                intro: 'Mình tạm gợi ý nhanh để bạn vẫn có thể tiếp tục demo mà không bị đứt mạch trải nghiệm.',
+                fallback: true,
+                destinations
+            };
+        }
+    </script>
+    <script>
+        function safeHtmlText(value = '') {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        const API_BASE_URL_ENHANCED = (() => {
+            const { protocol, hostname, port, origin } = window.location;
+            const isLocalHost = hostname === '127.0.0.1' || hostname === 'localhost';
+            const isLiveServer = isLocalHost && !!port && port !== '3001';
+            const isFileMode = protocol === 'file:';
+
+            if (isLiveServer || isFileMode) {
+                return 'http://localhost:3001';
+            }
+
+            return origin;
+        })();
+
+        function buildApiUrlEnhanced(pathname = '') {
+            return `${API_BASE_URL_ENHANCED}${pathname}`;
+        }
+
+        function formatDisplayMoneyEnhanced(amount, isMock = false) {
+            return `${Number(amount || 0).toLocaleString('vi-VN')} VND${isMock ? ' · giá demo' : ''}`;
+        }
+
+        function registerRenderedFlightPayload(section, flight) {
+            const bookingId = `booking-${hashStringEnhanced(buildFlightSeedValue(section, flight))}`;
+            if (!ENHANCED_APP_STATE.renderedFlightMap[bookingId]) {
+                ENHANCED_APP_STATE.renderedFlightMap[bookingId] = {
+                    section: {
+                        title: section.title,
+                        from: section.from,
+                        to: section.to,
+                        date: section.date,
+                        dataSource: section.dataSource
+                    },
+                    flight: { ...flight },
+                    priceInfo: generateFlightDemoPrice(section, flight)
+                };
+            }
+            return bookingId;
+        }
+
+        function buildConsultantPanelEnhanced() {
+            const consultantState = ENHANCED_APP_STATE.consultantState;
+            if (consultantState.status === 'loading') {
+                return `<div class="consultant-panel"><div class="consultant-head"><div><h3>AI Travel Consultant</h3><p>Đang tổng hợp thời tiết, mẹo hành lý và gợi ý vui chơi cho hành trình của bạn.</p></div><span class="step-pill active">Đang phân tích</span></div><div class="consultant-loading">Trợ lý du lịch đang gom vài ghi chú hữu ích để phần demo trông sống động hơn một chút.</div></div>`;
+            }
+
+            if (consultantState.status !== 'ready' || !consultantState.data) {
+                return '';
+            }
+
+            const consultant = consultantState.data;
+            const cards = (consultant.destinations || []).map((destination) => {
+                const ideas = Array.isArray(destination.budgetIdeas)
+                    ? destination.budgetIdeas.map((idea) => `<li>${safeHtmlText(beautifyDynamicText(idea))}</li>`).join('')
+                    : '';
+                return `<article class="consultant-destination"><strong>${safeHtmlText(beautifyDynamicText(destination.city || destination.airportCode || 'Điểm đến'))}</strong><p>${safeHtmlText(beautifyDynamicText(destination.overview || 'Điểm đến này đang có khá nhiều điều thú vị để khám phá.'))}</p><ul><li><span style="font-weight:800">Thời tiết:</span> ${safeHtmlText(beautifyDynamicText(destination.weatherTip || 'Nên kiểm tra dự báo thời tiết gần ngày khởi hành.'))}</li><li><span style="font-weight:800">Hành lý:</span> ${safeHtmlText(beautifyDynamicText(destination.packingTip || 'Mang theo hành lý gọn nhẹ và giấy tờ cần thiết.'))}</li>${ideas}${destination.warning ? `<li><span style="font-weight:800">Lưu ý:</span> ${safeHtmlText(beautifyDynamicText(destination.warning))}</li>` : ''}</ul></article>`;
+            }).join('');
+
+            return `<div class="consultant-panel"><div class="consultant-head"><div><h3>${safeHtmlText(beautifyDynamicText(consultant.title || 'AI Travel Consultant'))}</h3><p>${safeHtmlText(beautifyDynamicText(consultant.intro || 'Một vài gợi ý nhỏ để chuyến đi của bạn bớt phải nghĩ nhiều.'))}</p></div><span class="step-pill active">${consultant.fallback ? 'Fallback an toàn' : 'Tư vấn tự động'}</span></div><div class="consultant-grid">${cards}</div></div>`;
+        }
+
+        function buildSectionBannerEnhanced(section) {
+            const visual = getDestinationVisualCard(section.to);
+            return `<div class="section-banner"><img src="${visual.image}" alt="${safeHtmlText(visual.name)}"><div class="section-banner-content"><strong>${safeHtmlText(visual.name)}</strong><span>${safeHtmlText(visual.tagline)}</span></div></div>`;
+        }
+
+        function buildEmptySectionStateEnhanced(section, filterId) {
+            const filterLabel = FILTER_OPTIONS_CONFIG.find((item) => item.id === filterId)?.label || 'bộ lọc hiện tại';
+            return `<div class="empty-card"><strong>Chưa có chuyến nào khớp với "${safeHtmlText(filterLabel)}"</strong><p>Chặng ${safeHtmlText(section.from)} → ${safeHtmlText(section.to)} vẫn ổn, chỉ là bộ lọc hiện tại đang hơi khó tính. Thử chuyển sang "Tất cả" để xem lại toàn bộ lựa chọn nhé.</p></div>`;
+        }
+
+        function applyFilterToSectionEnhanced(section, filterId) {
+            const clonedFlights = [...section.flights];
+            if (filterId === 'vna') {
+                return clonedFlights.filter((flight) => (flight.airline || '').toLowerCase().includes('vietnam airlines'));
+            }
+            if (filterId === 'cheapest') {
+                return clonedFlights.sort((left, right) => generateFlightDemoPrice(section, left).amount - generateFlightDemoPrice(section, right).amount);
+            }
+            if (filterId === 'earliest') {
+                return clonedFlights.sort((left, right) => getFlightMinutesValue(left.departure) - getFlightMinutesValue(right.departure));
+            }
+            return clonedFlights;
+        }
+
+        function buildResultsHeaderEnhanced(results) {
+            const chips = FILTER_OPTIONS_CONFIG.map((filterItem) => `<button type="button" class="filter-chip ${ENHANCED_APP_STATE.activeFilter === filterItem.id ? 'active' : ''}" onclick="setEnhancedFilter('${filterItem.id}')">${safeHtmlText(filterItem.label)}</button>`).join('');
+            return `<div class="results-shell"><div class="results-head"><div><h3>Kết quả hành trình</h3><p>Tìm thấy ${results.summary.totalFlights} kết quả trên ${results.summary.totalSections} chặng. Bạn có thể lọc nhanh, đặt vé giả lập và lấy tư vấn du lịch tự động ngay bên dưới.</p></div><span class="step-pill active">Demo end-to-end</span></div><div class="filter-row">${chips}</div></div>`;
         }
 
         function renderFlightCard(section, flight) {
-            const referenceClass = section.exact ? '' : 'reference';
-            const statusLabel = section.exact ? 'Ket qua chang bay' : 'Lich bay tham khao';
-            return `
-                <div class="result-card">
-                    <div class="tag-header ${referenceClass}">
-                        <span>${flight.airline} - ${flight.flightNumber}</span>
-                        <span class="flight-date-badge">${flight.flightDate}</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="route">
-                            <span>${section.from}</span>
-                            <span>-></span>
-                            <span>${section.to}</span>
-                        </div>
-                        <div class="meta">${statusLabel}</div>
-                        ${formatBudgetPill(flight)}
-                        ${formatTimeInfo(flight)}
-                        ${formatBookingHost(flight.bookingLink)}
-                        ${flight.routeLink ? '<div class="meta">Luu y: page chang cua hang co the khong giu dung ngay ban da chon.</div>' : ''}
-                        ${formatPrice(flight.price)}
-                        <div class="ai-reason">${flight.note || 'Dang cap nhat thong tin chuyen bay.'}</div>
-                        <div class="cta-group">
-                            <a href="${flight.bookingLink}" target="_blank" rel="noopener noreferrer" class="cta">Mo trang hang</a>
-                            ${formatRouteCta(flight)}
-                        </div>
-                    </div>
-                </div>
-            `;
+            const bookingId = registerRenderedFlightPayload(section, flight);
+            const priceInfo = generateFlightDemoPrice(section, flight);
+            const isOfficialFuture = section.dataSource === 'official-future';
+            const isDemoFallback = section.dataSource === 'demo-fallback';
+            const statusLabel = isOfficialFuture
+                ? 'Lịch bay thật theo ngày từ provider'
+                : isDemoFallback
+                    ? 'Dữ liệu demo fallback do provider đang rate limit'
+                    : (section.exact ? 'Kết quả chặng bay' : 'Lịch bay tham khảo');
+            const demoPriceLabel = priceInfo.isMock || isDemoFallback
+                ? `<div class="price muted">${formatDisplayMoneyEnhanced(priceInfo.amount, true)}</div><div class="meta">${isDemoFallback ? 'Provider đang rate limit nên app hiển thị giá và lịch demo để bạn tiếp tục test luồng đặt vé.' : 'Giá này dùng cho flow đặt vé mô phỏng. Giá thật vui lòng xem trên website hãng.'}</div>`
+                : formatPrice(priceInfo.amount);
+            const routeButton = flight.routeLink ? `<a href="${flight.routeLink}" target="_blank" rel="noopener noreferrer" class="cta secondary">Xem page chặng</a>` : '<span class="cta secondary disabled">Chưa có page chặng</span>';
+            return `<div class="result-card"><div class="tag-header ${isOfficialFuture || section.exact ? '' : 'reference'}"><span>${safeHtmlText(flight.airline)} - ${safeHtmlText(flight.flightNumber)}</span><span class="flight-date-badge">${safeHtmlText(formatDisplayDate(flight.flightDate))}</span></div><div class="card-body"><div class="route"><span>${safeHtmlText(section.from)}</span><span>→</span><span>${safeHtmlText(section.to)}</span></div><div class="meta">${safeHtmlText(statusLabel)}</div>${formatBudgetPill(flight)}${formatTimeInfo(flight)}${formatBookingHost(flight.bookingLink)}${flight.routeLink ? '<div class="meta">Route page của hãng có thể không giữ đúng ngày bạn đã nhập, nên flow đặt vé demo sẽ giúp bạn xem trọn quy trình ổn định hơn.</div>' : ''}${demoPriceLabel}<div class="ai-reason">${safeHtmlText(beautifyDynamicText(flight.note || 'Đã sẵn sàng để bạn thử luồng đặt vé mô phỏng.'))}</div><div class="cta-group"><button type="button" class="cta" onclick="openBookingModal('${bookingId}')">Đặt vé demo</button>${routeButton}</div></div></div>`;
+        }
+
+        function renderEnhancedResults() {
+            const resultArea = document.getElementById('result-area');
+            const results = ENHANCED_APP_STATE.currentResults;
+            if (!results?.sections?.length) {
+                resultArea.style.display = 'none';
+                resultArea.innerHTML = '';
+                return;
+            }
+
+            const sectionsHtml = results.sections.map((section) => {
+                const filteredFlights = applyFilterToSectionEnhanced(section, ENHANCED_APP_STATE.activeFilter);
+                const summaryText = section.dataSource === 'official-future'
+                    ? `${filteredFlights.length} lịch bay thật hiển thị sau bộ lọc`
+                    : section.dataSource === 'demo-fallback'
+                        ? `${filteredFlights.length} chuyến demo fallback hiển thị do provider đang rate limit`
+                        : `${filteredFlights.length} chuyến bay hiển thị sau bộ lọc`;
+                return `<div class="section-card">${buildSectionBannerEnhanced(section)}<div class="section-title">${safeHtmlText(beautifyDynamicText(section.title))}: ${safeHtmlText(section.from)} → ${safeHtmlText(section.to)} | ${safeHtmlText(formatDisplayDate(section.date))}</div><div class="result-note">${safeHtmlText(beautifyDynamicText(summaryText))}</div>${filteredFlights.length ? filteredFlights.map((flight) => renderFlightCard(section, flight)).join('') : buildEmptySectionStateEnhanced(section, ENHANCED_APP_STATE.activeFilter)}</div>`;
+            }).join('');
+
+            resultArea.innerHTML = `${buildConsultantPanelEnhanced()}${buildResultsHeaderEnhanced(results)}${sectionsHtml}`;
+            resultArea.style.display = 'block';
+        }
+
+        function renderFriendlyErrorStateEnhanced(payload = {}) {
+            const resultArea = document.getElementById('result-area');
+            const ui = getErrorPresentationCard(payload.errorType, payload.message, payload.tip);
+            const showDateAction = ['future_window_not_supported', 'past_date', 'invalid_date'].includes(payload.errorType);
+            resultArea.innerHTML = `<div class="error-card"><strong>${safeHtmlText(ui.title)}</strong><p>${safeHtmlText(ui.message || 'Có một chút trục trặc vừa xuất hiện trong hành trình của bạn.')}</p><p>${safeHtmlText(ui.tip)}</p><div class="error-actions">${showDateAction ? '<button type="button" class="cta" onclick="applySupportedDatesEnhanced()">Dùng ngày khả dụng gần nhất</button>' : ''}<a href="#cong-cu" class="cta secondary">Quay lại công cụ</a></div></div>`;
+            resultArea.style.display = 'block';
+        }
+
+        function applySupportedDatesEnhanced() {
+            document.getElementById('flyDate').value = earliestSupportedValue;
+            document.getElementById('returnDate').value = nextSupportedValue;
+            document.querySelectorAll('.leg-date').forEach((field, index) => {
+                field.value = index === 0 ? earliestSupportedValue : nextSupportedValue;
+            });
+            document.getElementById('cong-cu').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function fetchConsultantAdviceEnhanced(results, requestToken = ENHANCED_APP_STATE.currentRequestToken) {
+            ENHANCED_APP_STATE.consultantState = { status: 'loading', data: null };
+            renderEnhancedResults();
+            try {
+                const response = await fetch(buildApiUrlEnhanced('/api/consultant'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tripType: results.tripType,
+                        budget: results.budget,
+                        sections: results.sections
+                    })
+                });
+                const data = await readApiPayloadEnhanced(response);
+                if (ENHANCED_APP_STATE.currentRequestToken !== requestToken) return;
+                ENHANCED_APP_STATE.consultantState = data.success
+                    ? { status: 'ready', data: data.consultant }
+                    : { status: 'ready', data: buildLocalConsultantFallbackCard(results) };
+            } catch (error) {
+                if (ENHANCED_APP_STATE.currentRequestToken !== requestToken) return;
+                console.error(error);
+                ENHANCED_APP_STATE.consultantState = { status: 'ready', data: buildLocalConsultantFallbackCard(results) };
+            }
+            renderEnhancedResults();
+        }
+
+        function setEnhancedFilter(filterId) {
+            ENHANCED_APP_STATE.activeFilter = filterId;
+            renderEnhancedResults();
+        }
+    </script>
+    <script>
+        const BOOKING_STEP_ITEMS = ['Chọn ghế', 'Hành khách', 'Thanh toán', 'E-ticket'];
+
+        function buildSeatPlanEnhanced(seedKey) {
+            const rows = Array.from({ length: 9 }, (_, index) => index + 1);
+            const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+            return rows.map((row) => ({
+                row,
+                seats: letters.map((letter) => {
+                    const seatLabel = `${row}${letter}`;
+                    const occupied = hashStringEnhanced(`${seedKey}-${seatLabel}`) % 6 === 0;
+                    return { seatLabel, occupied };
+                })
+            }));
+        }
+
+        function buildBookingCodeEnhanced(seedKey, prefix = 'SB') {
+            const seed = hashStringEnhanced(seedKey).toString(36).toUpperCase();
+            return `${prefix}${seed.slice(0, 5).padEnd(5, 'X')}`;
+        }
+
+        function buildQrCellsEnhanced(seedKey) {
+            const total = 21 * 21;
+            const isFinder = (row, col, top, left) => row >= top && row < top + 7 && col >= left && col < left + 7
+                && (row === top || row === top + 6 || col === left || col === left + 6 || (row >= top + 2 && row <= top + 4 && col >= left + 2 && col <= left + 4));
+            return Array.from({ length: total }, (_, index) => {
+                const row = Math.floor(index / 21);
+                const col = index % 21;
+                if (isFinder(row, col, 0, 0) || isFinder(row, col, 0, 14) || isFinder(row, col, 14, 0)) {
+                    return true;
+                }
+                return hashStringEnhanced(`${seedKey}-${row}-${col}`) % 3 === 0;
+            });
+        }
+
+        function startNewSearchEnhanced() {
+            closeBookingModal();
+            document.getElementById('cong-cu').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function openBookingModal(bookingId) {
+            const payload = ENHANCED_APP_STATE.renderedFlightMap[bookingId];
+            if (!payload) return;
+            ENHANCED_APP_STATE.bookingModalState = {
+                visible: true,
+                bookingId,
+                step: 1,
+                selectedSeat: '',
+                seatPlan: buildSeatPlanEnhanced(bookingId),
+                passengerForm: {
+                    fullName: '',
+                    email: '',
+                    phone: '',
+                    identity: ''
+                },
+                convenienceFee: 350000,
+                orderCode: buildBookingCodeEnhanced(`${bookingId}-order`, 'ORD'),
+                paymentCode: buildBookingCodeEnhanced(`${bookingId}-pay`, 'PAY'),
+                qrCells: buildQrCellsEnhanced(bookingId),
+                error: '',
+                ticketData: null
+            };
+            document.body.style.overflow = 'hidden';
+            renderBookingModal();
+        }
+
+        function closeBookingModal() {
+            ENHANCED_APP_STATE.bookingModalState = null;
+            document.body.style.overflow = '';
+            renderBookingModal();
+        }
+
+        function handleBookingBackdropEnhanced(event) {
+            if (event.target.id === 'booking-modal') {
+                closeBookingModal();
+            }
+        }
+
+        function handleBookingPanelClickEnhanced(event) {
+            event.stopPropagation();
+        }
+
+        function selectSeat(seatLabel) {
+            if (!ENHANCED_APP_STATE.bookingModalState) return;
+            ENHANCED_APP_STATE.bookingModalState.selectedSeat = seatLabel;
+            ENHANCED_APP_STATE.bookingModalState.error = '';
+            renderBookingModal();
+        }
+
+        function updatePassengerField(field, value) {
+            const bookingState = ENHANCED_APP_STATE.bookingModalState;
+            if (!bookingState) return;
+            bookingState.passengerForm[field] = value;
+            bookingState.error = '';
+            const errorBox = document.getElementById('booking-error-box');
+            if (errorBox) errorBox.innerHTML = '';
+        }
+
+        function validatePassengerFormEnhanced(form) {
+            if (!form.fullName.trim()) return 'Bạn cần điền họ tên hành khách trước khi sang bước thanh toán.';
+            if (!/.+@.+\..+/.test(form.email.trim())) return 'Email này trông chưa hợp lệ lắm, bạn kiểm tra lại nhé.';
+            if ((form.phone || '').replace(/\D/g, '').length < 9) return 'Số điện thoại nên có ít nhất 9 chữ số để vé demo trông đáng tin hơn.';
+            if ((form.identity || '').trim().length < 6) return 'Giấy tờ tùy thân cần đủ rõ để hệ thống in e-ticket đẹp mắt.';
+            return '';
+        }
+
+        function buildTicketDataEnhanced(payload, bookingState) {
+            return {
+                bookingCode: buildBookingCodeEnhanced(`${bookingState.bookingId}-ticket`, 'SB'),
+                gate: `G${(hashStringEnhanced(payload.flight.flightNumber || 'G1') % 18) + 1}`,
+                boardingTime: formatDateTimeValue(payload.flight.departure || payload.section.date),
+                passengerName: bookingState.passengerForm.fullName.trim(),
+                identity: bookingState.passengerForm.identity.trim()
+            };
+        }
+
+        function goBookingStep(direction) {
+            const bookingState = ENHANCED_APP_STATE.bookingModalState;
+            if (!bookingState) return;
+            bookingState.error = '';
+
+            if (direction < 0) {
+                bookingState.step = Math.max(1, bookingState.step - 1);
+                renderBookingModal();
+                return;
+            }
+
+            if (bookingState.step === 1 && !bookingState.selectedSeat) {
+                bookingState.error = 'Chọn một chỗ ngồi trước đã, để hành trình của bạn có vị trí thật cụ thể.';
+                renderBookingModal();
+                return;
+            }
+
+            if (bookingState.step === 2) {
+                const validationError = validatePassengerFormEnhanced(bookingState.passengerForm);
+                if (validationError) {
+                    bookingState.error = validationError;
+                    renderBookingModal();
+                    return;
+                }
+            }
+
+            if (bookingState.step === 3) {
+                const payload = ENHANCED_APP_STATE.renderedFlightMap[bookingState.bookingId];
+                bookingState.ticketData = buildTicketDataEnhanced(payload, bookingState);
+                bookingState.step = 4;
+                renderBookingModal();
+                return;
+            }
+
+            bookingState.step = Math.min(4, bookingState.step + 1);
+            renderBookingModal();
+        }
+
+        function buildBookingSummaryEnhanced(payload, bookingState) {
+            const totalAmount = payload.priceInfo.amount + bookingState.convenienceFee;
+            return `<div class="booking-summary"><h4>Tóm tắt đơn demo</h4><div class="summary-row"><span>Chặng bay</span><strong>${safeHtmlText(payload.section.from)} → ${safeHtmlText(payload.section.to)}</strong></div><div class="summary-row"><span>Chuyến</span><strong>${safeHtmlText(payload.flight.airline)} · ${safeHtmlText(payload.flight.flightNumber)}</strong></div><div class="summary-row"><span>Ngày bay</span><strong>${safeHtmlText(formatDisplayDate(payload.flight.flightDate || payload.section.date))}</strong></div><div class="summary-row"><span>Chỗ ngồi</span><strong>${safeHtmlText(bookingState.selectedSeat || 'Bạn chưa chọn')}</strong></div><div class="summary-row"><span>Giá vé demo</span><strong>${safeHtmlText(formatDisplayMoneyEnhanced(payload.priceInfo.amount, payload.priceInfo.isMock))}</strong></div><div class="summary-row"><span>Phí mô phỏng</span><strong>${safeHtmlText(formatDisplayMoneyEnhanced(bookingState.convenienceFee))}</strong></div><div class="summary-row"><span>Tổng cộng</span><strong>${safeHtmlText(formatDisplayMoneyEnhanced(totalAmount, payload.priceInfo.isMock))}</strong></div></div>`;
+        }
+
+        function buildSeatStepEnhanced(bookingState) {
+            const rowsHtml = bookingState.seatPlan.map((row) => {
+                const seatButtons = row.seats.map((seat, index) => {
+                    const stateClass = seat.occupied ? 'occupied' : (bookingState.selectedSeat === seat.seatLabel ? 'selected' : 'available');
+                    const spacer = index === 2 ? '<div></div>' : '';
+                    return `${spacer}<button type="button" class="seat ${stateClass}" onclick="selectSeat('${seat.seatLabel}')">${seat.seatLabel}</button>`;
+                }).join('');
+                return `<div class="seat-row"><div class="seat-row-label">${row.row}</div>${seatButtons}</div>`;
+            }).join('');
+            return `<h4>Bước 1 · Chọn chỗ ngồi</h4><p>Chúng mình dùng sơ đồ ghế mô phỏng ổn định theo từng chuyến để bài demo trông như một luồng đặt vé thật.</p><div class="seat-map">${rowsHtml}</div><div class="seat-legend"><div class="legend-item"><span class="legend-dot available"></span><span>Ghế trống</span></div><div class="legend-item"><span class="legend-dot selected"></span><span>Ghế bạn chọn</span></div><div class="legend-item"><span class="legend-dot occupied"></span><span>Ghế đã bán</span></div></div>`;
+        }
+
+        function buildPassengerStepEnhanced(bookingState) {
+            const form = bookingState.passengerForm;
+            return `<h4>Bước 2 · Điền thông tin hành khách</h4><p>Thông tin này chỉ dùng cho mô phỏng, nhưng vẫn được kiểm tra để e-ticket cuối cùng trông chỉn chu.</p><div class="passenger-grid"><div><label>Họ và tên</label><input type="text" value="${safeHtmlText(form.fullName)}" oninput="updatePassengerField('fullName', this.value)" placeholder="Nguyễn Văn A"></div><div><label>Email</label><input type="email" value="${safeHtmlText(form.email)}" oninput="updatePassengerField('email', this.value)" placeholder="ban@example.com"></div><div><label>Số điện thoại</label><input type="tel" value="${safeHtmlText(form.phone)}" oninput="updatePassengerField('phone', this.value)" placeholder="09xxxxxxxx"></div><div><label>Giấy tờ tùy thân</label><input type="text" value="${safeHtmlText(form.identity)}" oninput="updatePassengerField('identity', this.value)" placeholder="CCCD hoặc hộ chiếu"></div></div>`;
+        }
+
+        function buildPaymentStepEnhanced(payload, bookingState) {
+            const totalAmount = payload.priceInfo.amount + bookingState.convenienceFee;
+            const qrHtml = bookingState.qrCells.map((filled) => `<span class="qr-cell ${filled ? 'filled' : ''}"></span>`).join('');
+            return `<h4>Bước 3 · Thanh toán giả lập</h4><p>Phần này dùng mã QR VNPay mô phỏng để demo trọn luồng end-to-end mà không chạm vào cổng thanh toán thật.</p><div class="payment-grid"><div class="qr-card"><strong>VNPay Demo</strong><div class="qr-grid">${qrHtml}</div><p>Mã đơn: ${safeHtmlText(bookingState.orderCode)}</p><p>Số tham chiếu: ${safeHtmlText(bookingState.paymentCode)}</p></div><div class="payment-note"><p><strong>Tổng thanh toán:</strong> ${safeHtmlText(formatDisplayMoneyEnhanced(totalAmount, payload.priceInfo.isMock))}</p><p><strong>Người thanh toán:</strong> ${safeHtmlText(bookingState.passengerForm.fullName || 'Chưa cập nhật')}</p><p><strong>Ghế đã giữ:</strong> ${safeHtmlText(bookingState.selectedSeat || '--')}</p><p>Mẹo trình bày: đến đây là thầy cô có thể thấy rõ app không chỉ dừng ở tìm kiếm mà đã mô phỏng được cả thanh toán và phát hành vé điện tử.</p></div></div>`;
+        }
+
+        function buildTicketStepEnhanced(payload, bookingState) {
+            const ticket = bookingState.ticketData;
+            return `<h4>Bước 4 · Vé điện tử</h4><p>Chuyến bay demo của bạn đã sẵn sàng. Bây giờ bạn có thể trình bày luồng hoàn chỉnh rồi mới mở sang website hãng thật nếu cần.</p><div class="ticket-card"><div class="ticket-top"><div><div class="ticket-code">${safeHtmlText(ticket.bookingCode)}</div><p>${safeHtmlText(payload.flight.airline)} · ${safeHtmlText(payload.flight.flightNumber)}</p></div><span class="step-pill active">E-ticket</span></div><div class="ticket-route"><span>${safeHtmlText(payload.section.from)}</span><span>→</span><span>${safeHtmlText(payload.section.to)}</span></div><div class="ticket-meta"><div class="ticket-chip"><span>Hành khách</span><strong>${safeHtmlText(ticket.passengerName)}</strong></div><div class="ticket-chip"><span>Ghế</span><strong>${safeHtmlText(bookingState.selectedSeat)}</strong></div><div class="ticket-chip"><span>Ngày bay</span><strong>${safeHtmlText(formatDisplayDate(payload.flight.flightDate || payload.section.date))}</strong></div><div class="ticket-chip"><span>Boarding</span><strong>${safeHtmlText(ticket.boardingTime)}</strong></div><div class="ticket-chip"><span>Cửa ra máy bay</span><strong>${safeHtmlText(ticket.gate)}</strong></div><div class="ticket-chip"><span>Giấy tờ</span><strong>${safeHtmlText(ticket.identity)}</strong></div></div></div>`;
+        }
+
+        function renderBookingModal() {
+            const modal = document.getElementById('booking-modal');
+            const bookingState = ENHANCED_APP_STATE.bookingModalState;
+            if (!bookingState) {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+                modal.innerHTML = '';
+                return;
+            }
+
+            const payload = ENHANCED_APP_STATE.renderedFlightMap[bookingState.bookingId];
+            const stepContent = bookingState.step === 1
+                ? buildSeatStepEnhanced(bookingState)
+                : bookingState.step === 2
+                    ? buildPassengerStepEnhanced(bookingState)
+                    : bookingState.step === 3
+                        ? buildPaymentStepEnhanced(payload, bookingState)
+                        : buildTicketStepEnhanced(payload, bookingState);
+            const footerActions = bookingState.step < 4
+                ? `${bookingState.step > 1 ? '<button type="button" class="secondary-btn" onclick="goBookingStep(-1)">Quay lại</button>' : '<span></span>'}<button type="button" onclick="goBookingStep(1)">${bookingState.step === 3 ? 'Xuất vé điện tử' : 'Tiếp tục'}</button>`
+                : `<button type="button" class="secondary-btn" onclick="startNewSearchEnhanced()">Đặt chuyến mới</button>${payload.flight.bookingLink ? `<a href="${payload.flight.bookingLink}" target="_blank" rel="noopener noreferrer" class="cta">Mở website hãng</a>` : '<span class="cta disabled">Chưa có website hãng</span>'}`;
+
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            modal.innerHTML = `<div class="booking-panel" onclick="handleBookingPanelClickEnhanced(event)"><div class="booking-head"><div><h3>Đặt vé giả lập cho ${safeHtmlText(payload.flight.airline)} · ${safeHtmlText(payload.flight.flightNumber)}</h3><p>Luồng này mô phỏng trọn quy trình người dùng từ chọn ghế tới nhận e-ticket, giúp bài demo có cảm giác hoàn chỉnh hơn.</p></div><button type="button" class="modal-close" onclick="closeBookingModal()">Đóng</button></div><div class="step-list">${BOOKING_STEP_ITEMS.map((stepLabel, index) => `<div class="step-pill ${bookingState.step === index + 1 ? 'active' : ''}">${index + 1}. ${safeHtmlText(stepLabel)}</div>`).join('')}</div><div class="booking-content"><div class="booking-main">${stepContent}${bookingState.error ? `<div id="booking-error-box" class="booking-error">${safeHtmlText(bookingState.error)}</div>` : '<div id="booking-error-box"></div>'}</div><aside class="booking-side">${buildBookingSummaryEnhanced(payload, bookingState)}</aside></div><div class="booking-footer">${footerActions}</div></div>`;
+            modal.onclick = handleBookingBackdropEnhanced;
+        }
+    </script>
+    <script>
+        function buildClientErrorPayloadEnhanced(errorType, message, tip) {
+            return { errorType, message, tip };
+        }
+
+        async function readApiPayloadEnhanced(response) {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                return response.json();
+            }
+
+            const rawText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${(rawText || 'empty response').slice(0, 220)}`);
         }
 
         async function searchByText() {
             const text = document.getElementById('textRequest').value.trim();
             if (!text) {
-                alert('Vui long nhap yeu cau.');
+                setAiFeedback('Vui lòng nhập mô tả hành trình trước khi bấm tìm bằng AI.');
+                setAiSuggestions([]);
+                renderFriendlyErrorStateEnhanced(buildClientErrorPayloadEnhanced(
+                    'input_missing',
+                    'Bạn chưa nhập yêu cầu nào để AI bắt đầu bóc tách hành trình.',
+                    'Hãy mô tả chặng bay, ngày đi và ngân sách để hệ thống hiểu ý định của bạn rõ hơn.'
+                ));
                 return;
             }
+
             setAiFeedback('');
             setAiSuggestions([]);
             await search({ text, tripType: 'oneway' });
         }
 
-        function collectMultiCityLegs() {
-            return [...document.querySelectorAll('.multi-leg')].map(leg => ({
-                from: leg.querySelector('.leg-from').value,
-                to: leg.querySelector('.leg-to').value,
-                date: leg.querySelector('.leg-date').value
-            }));
-        }
-
         async function searchByForm() {
             const tripType = document.getElementById('tripType').value;
-            const budget = parseInt(document.getElementById('budget').value, 10);
+            const budget = parseInt(document.getElementById('budget').value, 10) || 3000000;
 
             if (tripType === 'multicity') {
                 const legs = collectMultiCityLegs();
-                if (legs.some(leg => !leg.from || !leg.to || !leg.date)) {
-                    alert('Vui long dien du thong tin cho moi chang.');
+                if (legs.some((leg) => !leg.from || !leg.to || !leg.date)) {
+                    renderFriendlyErrorStateEnhanced(buildClientErrorPayloadEnhanced(
+                        'input_missing',
+                        'Bạn còn thiếu thông tin ở một trong các chặng multi-city.',
+                        'Điền đủ điểm đi, điểm đến và ngày cho từng chặng rồi tìm lại nhé.'
+                    ));
                     return;
                 }
                 await search({ tripType, legs, budget });
@@ -497,12 +1023,20 @@
             const returnDate = document.getElementById('returnDate').value;
 
             if (!from || !to || !date) {
-                alert('Vui long dien day du thong tin.');
+                renderFriendlyErrorStateEnhanced(buildClientErrorPayloadEnhanced(
+                    'input_missing',
+                    'Form này vẫn đang thiếu vài mảnh ghép cơ bản.',
+                    'Bạn hãy chọn đủ điểm đi, điểm đến và ngày khởi hành rồi tìm lại.'
+                ));
                 return;
             }
 
             if (tripType === 'roundtrip' && !returnDate) {
-                alert('Vui long chon ngay ve.');
+                renderFriendlyErrorStateEnhanced(buildClientErrorPayloadEnhanced(
+                    'input_missing',
+                    'Khứ hồi mà chưa có ngày về thì máy bay vẫn chưa dám xếp lịch.',
+                    'Thêm ngày về để hệ thống render trọn hành trình khứ hồi cho bạn.'
+                ));
                 return;
             }
 
@@ -512,60 +1046,63 @@
         async function search(body) {
             const loading = document.getElementById('loading');
             const resultArea = document.getElementById('result-area');
+            const requestToken = `${Date.now()}-${Math.random()}`;
+            ENHANCED_APP_STATE.currentRequestToken = requestToken;
+            closeBookingModal();
             loading.style.display = 'block';
             resultArea.style.display = 'none';
             resultArea.innerHTML = '';
 
             try {
-                const response = await fetch('/api/search', {
+                const response = await fetch(buildApiUrlEnhanced('/api/search'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
-                const data = await response.json();
+                const data = await readApiPayloadEnhanced(response);
+                if (ENHANCED_APP_STATE.currentRequestToken !== requestToken) return;
                 loading.style.display = 'none';
 
                 if (!data.success) {
-                    if (body.text && (data.needsClarification || (data.message || '').includes('Thieu thong tin'))) {
+                    ENHANCED_APP_STATE.currentResults = null;
+                    ENHANCED_APP_STATE.consultantState = { status: 'idle', data: null };
+                    ENHANCED_APP_STATE.renderedFlightMap = {};
+
+                    if (body.text && data.needsClarification) {
                         setAiFeedback(data.message);
                         setAiSuggestions(data.suggestionPrompts || []);
                         resultArea.style.display = 'none';
                         return;
                     }
-                    resultArea.innerHTML = `<div class="error-message">${data.message}</div>`;
-                    resultArea.style.display = 'block';
+
+                    setAiFeedback('');
+                    setAiSuggestions([]);
+                    renderFriendlyErrorStateEnhanced(data);
                     return;
                 }
 
                 setAiFeedback('');
                 setAiSuggestions([]);
-
-                const sectionsHtml = data.sections.map(section => {
-                    const sectionSummary = section.exact
-                        ? `${section.flights.length} chuyen, ${section.budgetMatches} chuyen trong ngan sach`
-                        : `${section.flights.length} lich bay dung ngay`;
-
-                    return `
-                        <div class="section-card">
-                            <div class="section-title">${section.title}: ${section.from} -> ${section.to} | ${section.date}</div>
-                            <div class="result-note">${sectionSummary}</div>
-                            ${section.flights.map(flight => renderFlightCard(section, flight)).join('')}
-                        </div>
-                    `;
-                }).join('');
-
-                resultArea.innerHTML = `${sectionsHtml}<div class="result-note">Tong cong ${data.summary.totalFlights} ket qua tren ${data.summary.totalSections} chang.</div>`;
-                resultArea.style.display = 'block';
+                ENHANCED_APP_STATE.renderedFlightMap = {};
+                ENHANCED_APP_STATE.activeFilter = 'all';
+                ENHANCED_APP_STATE.currentResults = data;
+                ENHANCED_APP_STATE.consultantState = { status: 'loading', data: null };
+                renderEnhancedResults();
+                fetchConsultantAdviceEnhanced(data, requestToken);
             } catch (error) {
+                if (ENHANCED_APP_STATE.currentRequestToken !== requestToken) return;
                 loading.style.display = 'none';
-                resultArea.innerHTML = '<div class="error-message">Khong ket noi duoc backend. Hay chay node server.js.</div>';
-                resultArea.style.display = 'block';
+                ENHANCED_APP_STATE.currentResults = null;
+                ENHANCED_APP_STATE.consultantState = { status: 'idle', data: null };
+                ENHANCED_APP_STATE.renderedFlightMap = {};
                 console.error(error);
+                renderFriendlyErrorStateEnhanced(buildClientErrorPayloadEnhanced(
+                    'provider_failure',
+                    `Không lấy được phản hồi hợp lệ từ backend. ${error?.message || ''}`.trim(),
+                    'Nếu đang mở bằng Live Server thì vẫn cần chạy node server.js ở cổng 3001. Sau đó refresh lại trang và thử tìm tiếp.'
+                ));
             }
         }
-
-        seedMultiLegs();
-        updateTripTypeUI();
     </script>
 </body>
 </html>
