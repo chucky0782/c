@@ -324,8 +324,14 @@
         const formatDisplayDate = (dateValue) => /^\d{4}-\d{2}-\d{2}$/.test(dateValue || '') ? `${dateValue.split('-')[2]} Thg ${dateValue.split('-')[1]}, ${dateValue.split('-')[0]}` : (dateValue || '--');
         function formatDateTimeValue(value) {
             if (!value) return '--';
-            const parsed = new Date(String(value).trim());
-            return Number.isNaN(parsed.getTime()) ? String(value).trim() : parsed.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            // Handle AeroDataBox object structure { local, utc }
+            const rawValue = typeof value === 'object' ? (value.local || value.utc || value.scheduledTimeLocal || value.scheduledTimeUtc) : value;
+            if (!rawValue) return '--';
+            
+            const parsed = new Date(String(rawValue).trim().replace(' ', 'T'));
+            return Number.isNaN(parsed.getTime()) 
+                ? String(rawValue).trim() 
+                : parsed.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
         }
         function beautifyDynamicText(text = '') {
             const repairMojibake = (value = '') => {
@@ -402,7 +408,12 @@
             document.getElementById('return-date-group').classList.toggle('hidden', tripType !== 'roundtrip');
         }
         const formatPrice = (price) => price === null || price === undefined ? '<div class="price muted">Xem giá trực tiếp trên website hãng</div>' : `<div class="price">${price.toLocaleString('vi-VN')} VND</div>`;
-        const formatTimeInfo = (flight) => !flight.departure && !flight.arrival ? '' : `<div class="meta">Giờ bay: ${formatDateTimeValue(flight.departure)} → ${formatDateTimeValue(flight.arrival)}</div>`;
+        const formatTimeInfo = (flight) => {
+            const dep = flight.departure || flight.departureTime;
+            const arr = flight.arrival || flight.arrivalTime;
+            if (!dep && !arr) return '';
+            return `<div class="meta">Giờ bay: ${formatDateTimeValue(dep)} → ${formatDateTimeValue(arr)}</div>`;
+        };
         function formatBookingHost(url) {
             if (!url) return '<div class="meta">Link đặt vé: chưa map được tự động</div>';
             try { return `<div class="meta">Link đặt vé: ${new URL(url).hostname}</div>`; } catch { return `<div class="meta">Link đặt vé: ${url}</div>`; }
@@ -652,18 +663,7 @@
                 .replaceAll("'", '&#39;');
         }
 
-        const API_BASE_URL_ENHANCED = (() => {
-            const { protocol, hostname, port, origin } = window.location;
-            const isLocalHost = hostname === '127.0.0.1' || hostname === 'localhost';
-            const isLiveServer = isLocalHost && !!port && port !== '3001';
-            const isFileMode = protocol === 'file:';
-
-            if (isLiveServer || isFileMode) {
-                return 'http://localhost:3001';
-            }
-
-            return origin;
-        })();
+        const API_BASE_URL_ENHANCED = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3001' : '';
 
         function buildApiUrlEnhanced(pathname = '') {
             return `${API_BASE_URL_ENHANCED}${pathname}`;

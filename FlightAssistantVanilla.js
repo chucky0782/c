@@ -56,8 +56,8 @@ window.FlightAssistantVanilla = (function() {
   // Logistics Methods
   function calculateDuration(dep, arr) {
     if (!dep || !arr) return '--';
-    const d1 = new Date(typeof dep === 'object' ? (dep.local || dep.utc) : String(dep).replace(' ', 'T'));
-    const d2 = new Date(typeof arr === 'object' ? (arr.local || arr.utc) : String(arr).replace(' ', 'T'));
+    const d1 = new Date(typeof dep === 'object' ? (dep.local || dep.utc || dep.scheduledTimeLocal || dep.scheduledTimeUtc) : String(dep).replace(' ', 'T'));
+    const d2 = new Date(typeof arr === 'object' ? (arr.local || arr.utc || arr.scheduledTimeLocal || arr.scheduledTimeUtc) : String(arr).replace(' ', 'T'));
     if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return '--';
     const diffMs = d2.getTime() - d1.getTime();
     if (diffMs <= 0) return '--';
@@ -68,7 +68,7 @@ window.FlightAssistantVanilla = (function() {
 
   function getCheckInTimes(dep) {
     if (!dep) return null;
-    const d1 = new Date(typeof dep === 'object' ? (dep.local || dep.utc) : String(dep).replace(' ', 'T'));
+    const d1 = new Date(typeof dep === 'object' ? (dep.local || dep.utc || dep.scheduledTimeLocal || dep.scheduledTimeUtc) : String(dep).replace(' ', 'T'));
     if (isNaN(d1.getTime())) return null;
     const onlineCheckin = new Date(d1.getTime() - 24 * 3600000);
     const airportArrival = new Date(d1.getTime() - 2 * 3600000);
