@@ -2,12 +2,22 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const AVIATION_KEY = 'ea0ff3aa76278ec533a664129ec4dd0f';
-const GEMINI_KEY = 'AIzaSyDs_Xrf1DgEnJk5ORCLg2VaNJuQrybkf5E';
+const AVIATION_KEY = process.env.AVIATION_KEY;
+const ADB_API_KEY = process.env.ADB_API_KEY || AVIATION_KEY;
+const ADB_BASE_URL = process.env.ADB_BASE_URL || 'https://prod.api.market/api/v1/aedbx/aerodatabox';
+const GEMINI_KEY = process.env.GEMINI_KEY;
 const DEFAULT_BUDGET = 3000000;
+const GEMINI_TIMEOUT_MS = 15000;
+const GEMINI_MAX_RETRIES = 3;
+const GEMINI_RETRY_BASE_DELAY_MS = 2000;
+const GEMINI_FORBIDDEN_COOLDOWN_MS = 10 * 60 * 1000;
+const FORCE_MOCK_DATA = String(process.env.FORCE_MOCK_DATA || 'true').toLowerCase() === 'true';
+const FORCE_MOCK_GEMINI = String(process.env.FORCE_MOCK_GEMINI || String(FORCE_MOCK_DATA)).toLowerCase() === 'true';
+const FORCE_MOCK_FLIGHTS = String(process.env.FORCE_MOCK_FLIGHTS || String(FORCE_MOCK_DATA)).toLowerCase() === 'true';
 
 app.use(cors());
 app.use(express.json());
@@ -115,6 +125,87 @@ const DEMO_ROUTE_DURATIONS = {
     'DAD-SGN': 90
 };
 
+const MIN_BUSINESS_BUDGET_VND = 500000;
+let geminiBlockedUntil = 0;
+
+function mockSearchFlights(budget, preferences = {}) {
+    const normalizedClass = typeof preferences.class === 'string'
+        ? preferences.class.toLowerCase()
+        : 'economy';
+
+    return {
+        flights: [
+            { id: 'DEMO-001', price: Math.min(Number(budget) || 0, 450000), class: normalizedClass },
+            { id: 'DEMO-002', price: Math.min(Number(budget) || 0, 500000), class: normalizedClass }
+        ],
+        meta: {
+            source: 'mock_search',
+            budget,
+            preferencesUsed: preferences
+        }
+    };
+}
+
+function callSearchFlights(budget, preferences = {}) {
+    if (typeof searchFlights === 'function') {
+        return searchFlights(budget, preferences);
+    }
+    return mockSearchFlights(budget, preferences);
+}
+
+function handleUserInput(userInput) {
+    if (!userInput || typeof userInput !== 'object' || Array.isArray(userInput)) {
+        return { error: 'Dữ liệu đầu vào phải là object.' };
+    }
+
+    if ('intent' in userInput && userInput.intent != null && typeof userInput.intent !== 'string') {
+        return { error: "Trường 'intent' phải là chuỗi nếu được cung cấp." };
+    }
+
+    const hasBudget = Object.prototype.hasOwnProperty.call(userInput, 'budget');
+    if (!hasBudget || userInput.budget == null) {
+        return { message: 'Vui lòng cho biết thêm ngân sách để tôi tư vấn tốt nhất' };
+    }
+
+    if (typeof userInput.budget === 'boolean') {
+        return { error: "Trường 'budget' phải là số hợp lệ." };
+    }
+
+    const budget = Number(userInput.budget);
+    if (!Number.isFinite(budget)) {
+        return { error: "Trường 'budget' phải là số hợp lệ." };
+    }
+    if (budget < 0) {
+        return { error: "Trường 'budget' không được âm." };
+    }
+
+    const rawPreferences = userInput.preferences;
+    let preferences = {};
+    if (rawPreferences == null) {
+        preferences = {};
+    } else if (typeof rawPreferences === 'object' && !Array.isArray(rawPreferences)) {
+        preferences = { ...rawPreferences };
+    } else {
+        return { error: "Trường 'preferences' phải là object nếu được cung cấp." };
+    }
+
+    const requestedClass = typeof preferences.class === 'string'
+        ? preferences.class.trim().toLowerCase()
+        : '';
+
+    if (budget <= MIN_BUSINESS_BUDGET_VND && requestedClass === 'business') {
+        const adjustedPreferences = { ...preferences, class: 'economy' };
+        return {
+            warning: 'Ngân sách của bạn không đủ cho hạng thương gia. Tôi sẽ gợi ý các chuyến bay giá rẻ nhất hiện có.',
+            result: callSearchFlights(budget, adjustedPreferences)
+        };
+    }
+
+    return {
+        result: callSearchFlights(budget, preferences)
+    };
+}
+
 function normalizeVietnamese(text = '') {
     return text
         .normalize('NFD')
@@ -187,20 +278,22 @@ function getSuggestedSearchDateString() {
 }
 
 function formatDateForPrompt(dateString) {
-    return formatDateForMessage(dateString);
+    const date = parseDateString(dateString);
+    if (!date) return dateString;
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
 }
 
 function buildDefaultClarificationPrompts() {
     const suggestedDate = formatDateForPrompt(getSuggestedSearchDateString());
     return [
-        `Toi muon bay tu Ha Noi den Singapore ngay ${suggestedDate}, ngan sach 4 trieu`,
-        `Toi muon bay tu TP. Ho Chi Minh den Bangkok ngay ${suggestedDate}, ngan sach 3 trieu`,
-        `Toi muon bay tu Da Nang den Ha Noi ngay ${suggestedDate}, ngan sach 2 trieu`
+        `Tôi muốn bay từ Hà Nội đến Singapore ngày ${suggestedDate}, ngân sách 4 triệu`,
+        `Tôi muốn bay từ TP. Hồ Chí Minh đến Bangkok ngày ${suggestedDate}, ngân sách 3 triệu`,
+        `Tôi muốn bay từ Đà Nẵng đến Hà Nội ngày ${suggestedDate}, ngân sách 2 triệu`
     ];
 }
 
 function buildAmbiguousPromptMessage() {
-    return `Yeu cau cua ban con mo ho. Vui long cung cap them san bay hoac noi ban o gan nhat, ngay gio bay va ngan sach. Neu khong ghi ngan sach, he thong se mac dinh 3.000.000 VND. Vi du: "Toi muon bay tu Ha Noi den Singapore ngay ${formatDateForPrompt(getSuggestedSearchDateString())}, ngan sach 4 trieu".`;
+    return `Yêu cầu của bạn còn mơ hồ. Vui lòng cung cấp thêm sân bay hoặc nơi bạn ở gần nhất, ngày giờ bay và ngân sách. Nếu không ghi ngân sách, hệ thống sẽ mặc định 3.000.000 VND. Ví dụ: "Tôi muốn bay từ Hà Nội đến Singapore ngày ${formatDateForPrompt(getSuggestedSearchDateString())}, ngân sách 4 triệu".`;
 }
 
 function formatBudgetForPrompt(budget) {
@@ -217,9 +310,9 @@ function buildVietnamAirportClarification(text, parsed) {
     const dateText = extractDateText(text) || formatDateForPrompt(getSuggestedSearchDateString());
     const budgetText = formatBudgetForPrompt(parsed.budget || DEFAULT_BUDGET);
     const airports = [
-        { code: 'HAN', city: 'Ha Noi' },
-        { code: 'SGN', city: 'TP. Ho Chi Minh' },
-        { code: 'DAD', city: 'Da Nang' }
+        { code: 'HAN', city: 'Hà Nội' },
+        { code: 'SGN', city: 'TP. Hồ Chí Minh' },
+        { code: 'DAD', city: 'Đà Nẵng' }
     ];
 
     if (originMatch && detectCountry(originMatch[1]) === 'vietnam') {
@@ -227,9 +320,9 @@ function buildVietnamAirportClarification(text, parsed) {
         const destinationLabel = destinationText === 'SIN' ? 'Singapore' : destinationText;
         return {
             needsAirportChoice: true,
-            message: 'Ban dang ghi diem di la Viet Nam. Ban muon khoi hanh gan san bay nao nhat?',
+            message: 'Bạn đang ghi điểm đi là Việt Nam. Bạn muốn khởi hành gần sân bay nào nhất?',
             suggestionPrompts: airports.map(airport =>
-                `Toi muon bay tu ${airport.city} den ${destinationLabel} ngay ${dateText}, ngan sach ${budgetText}`
+                `Tôi muốn bay từ ${airport.city} đến ${destinationLabel} ngày ${dateText}, ngân sách ${budgetText}`
             )
         };
     }
@@ -239,9 +332,9 @@ function buildVietnamAirportClarification(text, parsed) {
         const originLabel = originText === 'SIN' ? 'Singapore' : originText;
         return {
             needsAirportChoice: true,
-            message: 'Ban dang ghi diem den la Viet Nam. Ban muon ha canh o san bay nao?',
+            message: 'Bạn đang ghi điểm đến là Việt Nam. Bạn muốn hạ cánh ở sân bay nào?',
             suggestionPrompts: airports.map(airport =>
-                `Toi muon bay tu ${originLabel} den ${airport.city} ngay ${dateText}, ngan sach ${budgetText}`
+                `Tôi muốn bay từ ${originLabel} đến ${airport.city} ngày ${dateText}, ngân sách ${budgetText}`
             )
         };
     }
@@ -378,14 +471,64 @@ function extractJsonPayload(text = '') {
 }
 
 async function callGeminiJson(prompt) {
-    const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-        { contents: [{ parts: [{ text: prompt }] }] },
-        { headers: { 'Content-Type': 'application/json' } }
-    );
+    if (FORCE_MOCK_GEMINI) {
+        return null;
+    }
 
-    const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return extractJsonPayload(aiText);
+    const now = Date.now();
+    if (geminiBlockedUntil > now) {
+        const blockedError = new Error('Gemini tạm bị vô hiệu do lỗi quyền API trước đó.');
+        blockedError.code = 'gemini_temporarily_blocked';
+        throw blockedError;
+    }
+
+    if (!GEMINI_KEY || typeof GEMINI_KEY !== 'string') {
+        const keyError = new Error('Thiếu GEMINI_KEY.');
+        keyError.code = 'gemini_missing_key';
+        throw keyError;
+    }
+
+    for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt += 1) {
+        try {
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+                { contents: [{ parts: [{ text: prompt }] }] },
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: GEMINI_TIMEOUT_MS
+                }
+            );
+
+            const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            return extractJsonPayload(aiText);
+        } catch (error) {
+            const status = error?.response?.status;
+            const canRetry = status === 429 || status === 503;
+            const isLastAttempt = attempt === GEMINI_MAX_RETRIES;
+
+            if (status === 403) {
+                geminiBlockedUntil = Date.now() + GEMINI_FORBIDDEN_COOLDOWN_MS;
+                const forbiddenError = new Error(
+                    'Gemini trả về 403 (API key không hợp lệ, chưa bật API, hoặc bị giới hạn quyền truy cập).'
+                );
+                forbiddenError.code = 'gemini_forbidden';
+                throw forbiddenError;
+            }
+
+            if (canRetry && !isLastAttempt) {
+                const delayMs = GEMINI_RETRY_BASE_DELAY_MS * (attempt + 1);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                continue;
+            }
+
+            if (status) {
+                const statusError = new Error(`Gemini request failed with status ${status}.`);
+                statusError.code = 'gemini_http_error';
+                throw statusError;
+            }
+            throw error;
+        }
+    }
 }
 
 function buildSearchErrorResponse(errorType, headline, message, tip) {
@@ -559,7 +702,7 @@ function buildDateTimeForSchedule(dateString, timeString = '00:00', addMinutes =
 function formatDateForMessage(dateString) {
     const date = parseDateString(dateString);
     if (!date) return dateString;
-    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    return `${String(date.getDate()).padStart(2, '0')} Thg ${String(date.getMonth() + 1).padStart(2, '0')}, ${date.getFullYear()}`;
 }
 
 function getRealDataDatePolicy(dateString) {
@@ -602,16 +745,46 @@ function pickNestedValue(record, keys = []) {
     return null;
 }
 
+/**
+ * Unwrap a time value that may be an object {local, utc} from AeroDataBox API.
+ * Returns the local time string if available, otherwise utc, otherwise the value itself if it's a string.
+ */
+function unwrapTimeValue(val) {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+        return val.local || val.utc || val.scheduledTimeLocal || val.scheduledTimeUtc || null;
+    }
+    return null;
+}
+
 function normalizeOfficialFutureFlight(flight, from, to, date) {
+    // === DEBUG: In du lieu chuyen bay tho ra console ===
+    console.log('[DEBUG normalizeOfficialFutureFlight] raw flight:', JSON.stringify(flight, null, 2));
+    console.log('[DEBUG] flight.departure:', JSON.stringify(flight.departure, null, 2));
+    console.log('[DEBUG] flight.arrival:', JSON.stringify(flight.arrival, null, 2));
+    // === END DEBUG ===
+
     const airline = pickNestedValue(flight.airline, ['name']) || 'Hang bay';
     const bookingLink = getAirlineBookingLink(airline);
+    const flightNumber = (flight.number || '').replace(/\s+/g, '') ||
+        pickNestedValue(flight.flight, ['iataNumber', 'iata', 'number']) ||
+        'N/A';
+
+    const rawDeparture = pickNestedValue(flight.departure, ['scheduledTime', 'scheduled', 'estimatedTime']) || null;
+    const rawArrival = pickNestedValue(flight.arrival, ['scheduledTime', 'scheduled', 'estimatedTime']) || null;
+    const departureTime = unwrapTimeValue(rawDeparture);
+    const arrivalTime = unwrapTimeValue(rawArrival);
+    console.log('[DEBUG] departureTime resolved:', departureTime);
+    console.log('[DEBUG] arrivalTime resolved:', arrivalTime);
+    const status = typeof flight.status === 'string' ? flight.status : null;
 
     return {
         airline,
-        flightNumber: pickNestedValue(flight.flight, ['iataNumber', 'iata', 'number']) || 'N/A',
+        flightNumber,
         flightDate: date,
-        departure: pickNestedValue(flight.departure, ['scheduledTime', 'scheduled', 'estimatedTime']) || null,
-        arrival: pickNestedValue(flight.arrival, ['scheduledTime', 'scheduled', 'estimatedTime']) || null,
+        departure: departureTime,
+        arrival: arrivalTime,
         price: null,
         bookingLink,
         routeLink: getAirlineRouteLink(airline, from, to),
@@ -619,6 +792,7 @@ function normalizeOfficialFutureFlight(flight, from, to, date) {
         airlineBookingLink: bookingLink,
         source: 'official-future',
         withinBudget: null,
+        status,
         note: bookingLink
             ? `Tim thay lich bay that cho ngay ${date}. Gia can kiem tra truc tiep tren website cua hang.`
             : `Tim thay lich bay that cho ngay ${date}. App chua co link mo trang hang tu dong cho ${airline}, vui long tim theo ten hang va so hieu chuyen bay.`
@@ -1008,29 +1182,67 @@ ${destinationLines}
 }
 
 async function buildOfficialFlights(from, to, date) {
-    const response = await axios.get('https://api.aviationstack.com/v1/flightsFuture', {
-        params: {
-            access_key: AVIATION_KEY,
-            iataCode: from,
-            type: 'departure',
-            date
-        }
-    });
-
-    if (response.data?.error) {
-        const providerError = new Error(response.data.error.message || 'Aviationstack error');
-        providerError.response = { data: response.data };
-        throw providerError;
+    if (!ADB_API_KEY) {
+        const missingKeyError = new Error('Thiếu ADB_API_KEY hoặc AVIATION_KEY.');
+        missingKeyError.code = 'aviation_missing_key';
+        throw missingKeyError;
     }
 
-    return (response.data?.data || [])
+    const ranges = [
+        { fromLocal: `${date}T00:00`, toLocal: `${date}T11:59` },
+        { fromLocal: `${date}T12:00`, toLocal: `${date}T23:59` }
+    ];
+
+    const requests = ranges.map(range => axios.get(
+        `${ADB_BASE_URL}/flights/airports/iata/${from}/${range.fromLocal}/${range.toLocal}`,
+        {
+            params: {
+                direction: 'Departure',
+                withLeg: true,
+                withCancelled: false,
+                withCodeshared: true,
+                withCargo: false,
+                withPrivate: false,
+                withLocation: false
+            },
+            headers: {
+                'x-api-market-key': ADB_API_KEY
+            }
+        }
+    ));
+
+    const responses = await Promise.all(requests);
+    const departures = responses.flatMap(response => {
+        if (response?.data?.error) {
+            const providerError = new Error(response.data.error.message || 'AeroDataBox error');
+            providerError.response = { data: response.data };
+            throw providerError;
+        }
+        return Array.isArray(response?.data?.departures) ? response.data.departures : [];
+    });
+
+    const normalizedFlights = departures
         .filter(flight => {
-            const arrivalIata = pickNestedValue(flight.arrival, ['iataCode', 'iata', 'iata_code']);
-            return arrivalIata === to;
+            const arrivalIata = String(
+                flight?.arrival?.airport?.iata ||
+                flight?.movement?.airport?.iata ||
+                ''
+            ).toUpperCase();
+            return arrivalIata === String(to).toUpperCase();
         })
         .map(flight => normalizeOfficialFutureFlight(flight, from, to, date))
-        .filter(Boolean)
-        .sort(sortFlights);
+        .filter(Boolean);
+
+    const dedupedFlights = [];
+    const seen = new Set();
+    for (const item of normalizedFlights) {
+        const uniqueKey = `${item.flightNumber}-${item.departure || ''}-${item.arrival || ''}`;
+        if (seen.has(uniqueKey)) continue;
+        seen.add(uniqueKey);
+        dedupedFlights.push(item);
+    }
+
+    return dedupedFlights.sort(sortFlights);
 }
 
 async function searchLeg({ from, to, date, budget, label }) {
@@ -1059,6 +1271,32 @@ async function searchLeg({ from, to, date, budget, label }) {
             'Ngay bay nay dang lam radar roi chut',
             `Ngay bay cua ${label} khong hop le.`,
             'Ban thu chon lai ngay theo dinh dang hop le de app tiep tuc tim kiem.'
+        );
+    }
+
+    if (FORCE_MOCK_FLIGHTS) {
+        const demoFlights = buildDemoFallbackFlights(from, to, normalizedDate, budget);
+        if (demoFlights.length > 0) {
+            return {
+                success: true,
+                section: {
+                    title: label,
+                    from,
+                    to,
+                    date: normalizedDate,
+                    flights: demoFlights,
+                    exact: false,
+                    budgetMatches: demoFlights.filter(flight => flight.withinBudget === true).length,
+                    dataSource: 'mock-only'
+                }
+            };
+        }
+
+        return buildSearchErrorResponse(
+            'no_mock_flights',
+            'Chua co du lieu mock cho chang nay',
+            `Chua co du lieu mock cho ${label}: ${from} -> ${to} ngay ${normalizedDate}.`,
+            'Ban thu doi chang bay pho bien hon de tiep tuc demo.'
         );
     }
 
@@ -1332,12 +1570,12 @@ app.post('/api/search', async (req, res) => {
             date,
             returnDate,
             budget,
+            preferences = {},
             text,
             tripType = 'oneway',
             legs = []
         } = req.body || {};
 
-        if (!budget) budget = DEFAULT_BUDGET;
         console.log('Request:', buildRequestLog({ from, to, date, returnDate, budget, text, tripType, legs }));
 
         if (text) {
@@ -1368,15 +1606,43 @@ app.post('/api/search', async (req, res) => {
             tripType = 'oneway';
         }
 
+        if (!budget) {
+            return res.json({
+                success: false,
+                needsClarification: true,
+                message: 'Vui lòng cho biết thêm ngân sách để tôi tư vấn tốt nhất'
+            });
+        }
+
+        const budgetNumber = Number(budget);
+        if (!Number.isFinite(budgetNumber) || budgetNumber < 0) {
+            return res.status(400).json({
+                success: false,
+                error: "Trường 'budget' phải là số hợp lệ."
+            });
+        }
+        budget = budgetNumber;
+
+        const requestedClass = typeof preferences?.class === 'string'
+            ? preferences.class.trim().toLowerCase()
+            : '';
+        const warning = budget <= MIN_BUSINESS_BUDGET_VND && requestedClass === 'business'
+            ? 'Ngân sách của bạn không đủ cho hạng thương gia. Tôi sẽ gợi ý các chuyến bay giá rẻ nhất hiện có.'
+            : undefined;
+
         const trip = await buildTripSections({ tripType, from, to, date, returnDate, budget, legs });
         if (!trip.success) {
-            return res.json(trip);
+            return res.json({
+                ...trip,
+                ...(warning ? { warning } : {})
+            });
         }
 
         return res.json({
             success: true,
             tripType,
             budget,
+            ...(warning ? { warning } : {}),
             sections: trip.sections,
             summary: {
                 totalSections: trip.sections.length,

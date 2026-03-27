@@ -1,0 +1,12 @@
+{
+	"servers": {
+		"aedbx-aerodatabox": {
+			"type": "http",
+			"url": "https://prod.api.market/api/mcp/aedbx/aerodatabox",
+			"headers": {
+				"x-api-market-key": "cmn8lzhc90009kz04taewgipt"
+			}
+		}
+	},
+	"inputs": []
+}
